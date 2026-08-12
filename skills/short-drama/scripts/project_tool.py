@@ -180,7 +180,6 @@ DECLARED_EPISODE_ARTIFACT_OWNERS: dict[str, str] = {
     "storyboard/shots.jsonl": "short-drama-storyboard",
     "storyboard/keyframes.jsonl": "short-drama-storyboard",
     "storyboard/keyframe-prompts.md": "short-drama-storyboard",
-    "storyboard/storyboard.md": "short-drama-storyboard",
     "storyboard/motion-specs.jsonl": "short-drama-video-prompts",
     "storyboard/delivery-containers.jsonl": "short-drama-video-prompts",
     "storyboard/video-prompts.md": "short-drama-video-prompts",

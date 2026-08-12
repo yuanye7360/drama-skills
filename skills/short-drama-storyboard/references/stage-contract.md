@@ -109,7 +109,6 @@
 | SHT-22 | craft_default | Spatial relations are written so two readers resolve them the same way—contact, a stated distance, or an explicit relative position—rather than `near`, `beside`, `around`, or `somewhere`, which a generation surface resolves to an arbitrary gap. |
 | SHT-23 | reviewed_invariant | A keyframe projects the accepted performance master profile into one simultaneously-true instant: constant core preserved, behaviours that cannot happen in this posture converted rather than deleted, no invented behaviour, and no word carrying temporal sequence. |
 | SHT-24 | reviewed_invariant | Every character visible in a keyframe states this instant's gaze target, eyelid state, and catchlight, because a still frame never shows a blink and the omission survives both text and frame review. |
-| SHT-25 | craft_default | The creator-facing board and the execution-facing prompt list are two renderings of the same accepted shots and keyframes, not two authorities: neither may carry a fact absent from them, and the board—which carries shot and scene numbers, panel paths, and craft notes—is never handed to an execution surface as prompt text. |
 
 ### `CON`
 
