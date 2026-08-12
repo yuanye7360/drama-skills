@@ -109,6 +109,7 @@
 | SHT-22 | craft_default | Spatial relations are written so two readers resolve them the same way—contact, a stated distance, or an explicit relative position—rather than `near`, `beside`, `around`, or `somewhere`, which a generation surface resolves to an arbitrary gap. |
 | SHT-23 | reviewed_invariant | A keyframe projects the accepted performance master profile into one simultaneously-true instant: constant core preserved, behaviours that cannot happen in this posture converted rather than deleted, no invented behaviour, and no word carrying temporal sequence. |
 | SHT-24 | reviewed_invariant | Every character visible in a keyframe states this instant's gaze target, eyelid state, and catchlight, because a still frame never shows a blink and the omission survives both text and frame review. |
+| SHT-25 | reviewed_invariant | A multi-panel board sheet is one rendering of several accepted keyframes: each panel binds one accepted shot boundary, panel order follows source order, and panel count follows the shots already chosen—layout never decides shot count. It is a consistency and comparison anchor, not a start-frame authority: a frame handed to video generation is still rendered per shot, and a cropped panel is not that frame. Panel numbers, labels, arrows, and divider lines are in-frame content bound by the accepted text policy. |
 
 ### `CON`
 
