@@ -35,8 +35,8 @@
 
 ## 所有权边界
 
-- **本阶段拥有**：人物/地点/道具的身份与变体；资产状态变化记录与场景/单集资产台账；
-  出现证据的提取。
+- **本阶段拥有**：人物/地点/道具的身份与变体；角色表演主档案与其声音身份记录；
+  资产状态变化记录与场景/单集资产台账；出现证据的提取。
 - **本阶段继承**：剧本给出的身份、地理与文字政策；故事状态条目是开发/剧本的只读投影。
 - **本阶段不越权**：不决定镜头构图与动作终态，不改写剧情事实。台账里的故事状态只带来源
   指针，不构成第二个取值权威。
@@ -77,6 +77,10 @@
 | AST-05 | structural_invariant | Every downstream binding resolves to an accepted identity and valid variant. |
 | AST-06 | craft_default | Track only asset facts needed for recognition, reuse, prompt writing, or continuity. |
 | AST-07 | reviewed_invariant | Persistent voice identity and pronunciation refs stay separate from scene-level breath, emotion, volume, and delivery state. |
+| AST-08 | craft_default | A recurring character carries one cross-episode performance master profile, written once and rewritten per frame and per shot downstream rather than pasted; a later change to how a character behaves is recorded as a continuity delta, not as a second profile. |
+| AST-09 | reviewed_invariant | Each habit or tic in the profile names its trigger, and the profile names at least one mask together with the exact condition that cracks it; an untriggered tic gives downstream no basis to decide whether this frame should carry it. |
+| AST-10 | reviewed_invariant | The profile states eye life—gaze targeting, blink quality tied to state, live catchlights, and eyes arriving before the head—because a still frame never shows a blink, so its absence survives text and frame review and reaches the finished shot. |
+| AST-11 | structural_invariant | A speaking character's voice prompt is a fixed record reused verbatim wherever that character speaks; scene-level breath, volume, pause, and current emotion are written by downstream owners and never rewrite it. |
 
 ### `CON`
 

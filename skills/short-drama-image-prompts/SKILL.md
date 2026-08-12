@@ -37,6 +37,8 @@ license: MIT
 | 任务 | 必读资料 |
 |---|---|
 | 新建任意资产提示词 | [通用配方与视觉锚点](references/common-recipe.md) |
+| 定调色、光线、材质与视觉暂存器 | [调色、技术光线与视觉暂存器](references/palette-light-and-register.md) |
+| 判断这条提示词交给哪一种能力（生成或编辑车道、换视角） | [能力车道](references/capability-lanes.md) |
 | Look Development / 人物、地点、高压力风格帧 | [Lookdev 风格帧](references/lookdev-frame.md) |
 | 人物设定图 | 加读 [人物与造型](references/character-and-look.md) |
 | 造型、视角或道具状态的版本 | 加读 [造型与状态变体](references/look-and-state-variant.md) |

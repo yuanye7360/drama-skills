@@ -39,6 +39,10 @@ license: MIT
 
 - 竖屏多人、单房对白、证据揭示、群体轴线或门内外视角：
   [blocking-playbooks.md](references/blocking-playbooks.md)
+- 走位要写成可测量事实、身体朝向与视线要分开写、与地标的关系要物理锚定：
+  [spatial-lock.md](references/spatial-lock.md)
+- 关键帧要投影角色的表演（招牌小动作、眼神、地位落到身体），或不确定哪些行为
+  在这一帧成立：[performance-projection.md](references/performance-projection.md)
 - 需要查看“剧本 → 原文落实 → 镜头 → 关键帧”的完整正例，或对白表演括注
   `（情绪）` 怎样同源投影到本镜表演状态与下游 `delivery`：
   [screenplay-to-keyframe-example.md](references/screenplay-to-keyframe-example.md)

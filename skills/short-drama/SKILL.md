@@ -40,6 +40,7 @@ license: MIT
 | 导入小说/长材料并做可追溯分集与资产候选预览 | `$short-drama-develop` → 接受改编/分集 → `$short-drama-write` → 接受剧本 → `$short-drama-assets` |
 | 写/改单集契约、因果节拍、剧本 | `$short-drama-write` |
 | 拆人物/造型、地点/视图、道具/状态 | `$short-drama-assets` |
+| 定角色的表演主档案与声音身份（跨集、每个角色一份） | `$short-drama-assets` |
 | 写人物/地点/道具/局部修改的图片提示词 | `$short-drama-image-prompts` |
 | 做原文覆盖、镜头或冻结关键帧 | `$short-drama-storyboard` |
 | 写动作/表演/运镜/声音视频提示词 | `$short-drama-video-prompts` |

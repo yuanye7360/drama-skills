@@ -47,6 +47,13 @@
   expression, and light legible?
 - Does it avoid ordered actions, performance arcs, camera moves, or transforming
   environments?
+- Is blocking resolvable the same way by two readers—contact, stated distance, or an
+  explicit relative position rather than `near`/`beside`/"旁边" (`SHT-22`)? Are body
+  orientation and gaze written as two separate facts (`SHT-21`)?
+- Does the performance projection keep the master profile's constant core, convert
+  rather than delete impossible behaviours, and invent nothing (`SHT-23`)? Does each
+  visible character carry this instant's gaze target, eyelid state, and catchlight
+  (`SHT-24`)?
 
 ## Motion
 
@@ -58,6 +65,19 @@
   identical arc per actor?
 - Is `attention_handoffs` used only where attention truly transfers, rather than for
   synchronized reaction?
+- Is lens character written as observable outcome plus camera distance rather than
+  equipment metadata, and is it chosen by content type rather than emotion
+  (`VID-21`, `VID-22`)? Does one beat mix face portrait, environmental geography, and
+  macro detail?
+- Where the shot needs its subjects immediately, is first-frame occupancy declared
+  (`VID-23`)? Where it carries contact, load, liquid, or particles, does it state
+  physical cause and effect as states rather than processes (`VID-24`)?
+- Does lighting name key source, direction, camera side, shadow/rim side, background
+  brightness, and exposure priority—and does a backlit shot say exposure serves the
+  backlight (`VID-25`)?
+- Does per-shot performance project the accepted master profile without pasting it,
+  and shift eye life with the beat while staggering ensemble reactions
+  (`VID-26`, `VID-27`)?
 - Does the derived text-readiness view cite accepted inputs and real blocking gaps?
 - Does it avoid any claim about generated media quality, and avoid persisting a second
   readiness truth inside each motion record?

@@ -37,6 +37,9 @@ license: MIT
 | 任意镜头运动说明/提示词 | [起点—变化—终点配方](references/motion-recipe.md) |
 | 单人/多人表演、注意交接、节奏或超载 | [表演弧与动作预算](references/performance-action-timing.md) |
 | 运镜、环境、对白、声音、边界冲突 | [摄影声音与连续性](references/camera-audio-continuity.md) |
+| 镜头语言写出来会漂、要选焦段性格或写防漂移锁 | [光学语言](references/optics-lens-language.md) |
+| 首帧会空、动作像漂浮、脸被打平、多镜切点要写死 | [首帧、物理与光线三道优先锁](references/physics-lighting-and-first-frame.md) |
+| 把角色的表演主档案改写进这一镜（含眼神、群戏、声音身份） | [逐镜表演投影](references/performance-projection.md) |
 | 自检、独立复核、正反案例 | [审查量表与合成案例](references/review-and-fixtures.md) |
 | 生产端提示词写法、台词绑定、负面清单 | [生产提示词语法惯例](references/production-prompt-grammar.md) |
 | 分段交付、槽位职责、时长分配、交付路由与执行触发词 | [交付档案与槽位语义](references/delivery-profile.md) |

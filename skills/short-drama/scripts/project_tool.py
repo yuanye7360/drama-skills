@@ -162,6 +162,7 @@ DECLARED_PROJECT_ARTIFACT_OWNERS: dict[str, str] = {
     "bible/location-views.jsonl": "short-drama-assets",
     "bible/props.jsonl": "short-drama-assets",
     "bible/prop-states.jsonl": "short-drama-assets",
+    "bible/performance-profiles.jsonl": "short-drama-assets",
 }
 # Same, for the path below `episodes/<EP>/`.
 DECLARED_EPISODE_ARTIFACT_OWNERS: dict[str, str] = {

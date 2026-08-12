@@ -69,6 +69,11 @@ diff，让创作者明确选择 authority 迁移，将 standalone 契约标记 s
 
 对每个场景先回答：为什么必须存在、谁的议程对撞、哪个可见动作承载冲突、哪里发生方向性变化、退出状态给下游留下什么。需要场景与可见行动方法时读取 [script-craft.md](references/script-craft.md)。
 
+场景的表演压力写不出来时——目标写成了状态、整场只有一个战术、情绪没有代价、
+不知道谁输了——读取 [scene-pressure-and-performance.md](references/scene-pressure-and-performance.md)：
+它给出场景功能九格、战术更换与节拍的可见载体、物理任务与被打断的动作、距离与地位
+的可见标记，以及听与反应的判准。这些标记会被资产、分镜与视频提示词直接消费。
+
 写对白前读取 [dialogue-craft.md](references/dialogue-craft.md)，尤其检查人物策略、潜台词、信息争夺和声音差异。
 当声源、环境撤出、主动留白、画外存在或相邻场 sound bridge 承担戏剧转向时，读取
 [scene-sound-dramaturgy.md](references/scene-sound-dramaturgy.md)。剧本只拥有故事必需的声音事实，

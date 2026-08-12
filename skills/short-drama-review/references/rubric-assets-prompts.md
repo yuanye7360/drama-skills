@@ -65,7 +65,32 @@ apply type-specific criteria:
 - **Prop plate:** scale cue, shape, materials, wear, function/moving parts, current
   state, viewing angle, isolation, text policy.
 - **Edit delta:** exact target/hash/region, changes, preserve set, expected
-  continuity impact; no unrelated regeneration.
+  continuity impact; no unrelated regeneration. Did it start on the minimal-change
+  lane, change one thing, and pair every removal with what fills the gap
+  (`IMG-16`)? A view change must spell out the new object arrangement object by
+  object rather than only naming the new angle.
+- **Capability lane:** is the declared lane a capability description kept in the
+  metadata, rather than a vendor or model name, and absent from delivery text
+  (`IMG-15`)?
+- **Palette, light, register:** does the three-band palette state real hue names and
+  trace its split to creator instruction, scene content, or an accepted reference?
+  Does lighting name key source, direction, ratio, and falloff instead of a mood
+  adjective (`IMG-13`)? Cite the diluted anchor rather than a word count (`IMG-14`).
+
+## Performance master profile
+
+- Does each recurring character carry exactly one cross-episode profile, with later
+  behavioural change recorded as a continuity delta rather than a second profile
+  (`AST-08`)?
+- Does every tic name its trigger, and does the profile carry at least one mask with
+  the exact condition that cracks it (`AST-09`)?
+- Is eye life stated—gaze targeting, blink quality tied to state, live catchlights,
+  eyes arriving before the head (`AST-10`)? Its absence survives frame review, so
+  check the profile rather than the frames.
+- Is the voice prompt a fixed record reused verbatim wherever the character speaks,
+  with scene-level breath, volume, and emotion kept out of it (`AST-11`)?
+- Does the profile stay free of wardrobe, camera, colour, and this scene's objective?
+- Could two characters' profiles be swapped by changing the names?
 
 ## Prompt quality failures
 

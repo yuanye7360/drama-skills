@@ -25,8 +25,8 @@ license: MIT
   识别通道的形态与以面部结构为识别通道的形态需要不同的锚点集合；若状态为 `unset`，就向
   创作者给出选择，不从对话记忆补造。形态可以改变锚点的表达通道与颗粒度，不得反过来改写
   已接受的身份、地理、持物归属、可读文字政策或故事状态。
-- 只拥有 Character/Look、Location/View、Prop/State、occurrence reconciliation
-  和资产状态 delta。知识/信念/目标/关系/情绪等 story-state 可以在连续性
+- 只拥有 Character/Look、Location/View、Prop/State、角色表演主档案、occurrence
+  reconciliation 和资产状态 delta。知识/信念/目标/关系/情绪等 story-state 可以在连续性
   ledger 中被追踪，但只是带 write/develop source pointer 的投影，不是 assets
   的第二份真相。剧本语义归 `short-drama-write`，镜头手位/走位归
   `short-drama-storyboard`，图片提示词归 `short-drama-image-prompts`。
@@ -94,6 +94,13 @@ license: MIT
   `assets/location-view.example.jsonl`
 - Prop / State：`references/prop-and-state.md`；例见
   `assets/prop-state.example.jsonl`
+- 表演主档案（**仅本集新增角色**，已有角色不重写）：
+  [performance-master-profile.md](references/performance-master-profile.md)；例见
+  `assets/performance-profile.example.jsonl`
+
+表演主档案与身份锚点同属本阶段：它是角色跨集不变的表演真相（身体、声音身份、
+带触发条件的小动作、眼神生命、面具与裂缝），关键帧与逐镜表演都是它的改写。
+本阶段只写这份档案，不写单场目标与战术（属剧本），也不写镜内表演过程（属视频提示词）。
 
 每个新变体记录 base、变化、原因与有效范围。只写能帮助再次认出、复用、提示词
 编写或连续性检查的事实；不堆砌“高级、精致、电影感”等泛化修饰。
@@ -127,7 +134,8 @@ accepted snapshot，且不得交付。
 
 ### 7. 发布与修订
 
-发布至 `设定集/*.jsonl` 及 `剧集/<EP>/assets/{occurrences,decisions,continuity}.jsonl`。
+发布至 `设定集/*.jsonl`（含 `设定集/performance-profiles.jsonl`）及
+`剧集/<EP>/assets/{occurrences,decisions,continuity}.jsonl`。
 每个非权威重复值都携带 owner artifact/hash/field pointer。资产修改后只标记依赖该
 ID/variant 的提示词、镜头和 review 为 stale；不要重写无关资产或 screenplay。
 
