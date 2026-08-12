@@ -110,6 +110,7 @@ const FILE_LABELS = {
   "shots.jsonl": "镜头表",
   "keyframes.jsonl": "关键帧",
   "keyframe-prompts.md": "关键帧生成文案",
+  "storyboard.md": "故事板",
   "motion-specs.jsonl": "镜头运动",
   "video-prompts.md": "视频生成文案",
 };

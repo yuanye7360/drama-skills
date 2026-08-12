@@ -136,6 +136,12 @@ license: MIT
 关键帧不得包含“先、再、最后”、表演变化过程、运镜过程或正在变化的环境；时间变化
 交给 `$short-drama-video-prompts`。
 
+创作者要**读整场**而不是逐条复制去生成时，再用
+[storyboard.md](assets/storyboard.md) 渲染一份一场一页、逐镜一格的故事板。它与
+`keyframe-prompts.md` 同源不同用途：后者是执行端的生成队列，前者是给创作者、美术与
+导演看节奏与左右关系的板，**带镜号、场号与画面位，不得整段交给执行端**。两份都是派生
+文本，不是第二份事实来源（`SHT-25`）。
+
 ### 7. 校验并呈现
 
 先做原文落实、参考图权限和连续性的结构检查，再按制作资料自检。
@@ -212,3 +218,5 @@ python3 <skill-dir>/scripts/storyboard_check.py 剧集/EP001/storyboard/coverage
 - `剧集/<EP>/storyboard/shots.jsonl`
 - `剧集/<EP>/storyboard/keyframes.jsonl`
 - `剧集/<EP>/storyboard/keyframe-prompts.md`（仅派生文本）
+- `剧集/<EP>/storyboard/storyboard.md`（仅派生文本；创作者阅读用的故事板，只在创作者
+  需要整场阅读时生成）
