@@ -83,7 +83,7 @@
     "short-drama-storyboard/agents/openai.yaml": "af06d9c8dbafa5b778dd2abd1b52d26359c72cee634135c2cbb6fdf35eafa6e7",
     "short-drama-storyboard/assets/coverage-audition.example.jsonl": "4255def32f2e82c8c5a926812c17dca77d7271d5b2373ca1455b81257812ab03",
     "short-drama-storyboard/assets/coverage-template.json": "4339f95aad41b08515061236bd22cbddb211af8b232fbbc78c05f504311cff26",
-    "short-drama-storyboard/assets/keyframe-prompts.md": "f35322d685d83c6d8e30b1a754d0f0d30ae4821ec18d38e8bf48f8ca4fc3f090",
+    "short-drama-storyboard/assets/keyframe-prompts.md": "b15922f59c78bb4419f584903e90453516b7b782d82ad7f3437528e61602a918",
     "short-drama-storyboard/assets/keyframe-template.jsonl": "a92629de7feb1cd2af9fdd9d76e2f5ce38fdf5bce8409dd0da8d49b7c83a0366",
     "short-drama-storyboard/assets/revision-lineage.fragment.json": "375a15a2f52d4e280a84298ae44dd950d95880a611c4edf1f5df63f24f5aa6e2",
     "short-drama-storyboard/assets/scene-visual-plan.example.jsonl": "2459fbcc2dfd36b479a1b21ed3487c689de60f9abf41030ba50376f3ded4e491",
