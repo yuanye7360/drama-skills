@@ -41,7 +41,8 @@ license: MIT
 词表或时间片写法时读 [production-shot-grammar.md](references/production-shot-grammar.md)。
 关键场次需要先组织整场的立场、空间、摄影与声音运动时读
 [scene-visual-plan.md](references/scene-visual-plan.md)；第一种合理拍法不应直接成为唯一答案时加读
-[coverage-audition.md](references/coverage-audition.md)。
+[coverage-audition.md](references/coverage-audition.md)。把整场镜头分组画成 6–9 格 previs 故事板
+（shots → sheet → 每格首帧）时读 [storyboard-sheet.md](references/storyboard-sheet.md)。
 涉及背影、裁切、遮挡、画外或延迟揭示时读
 [阶段契约的参考媒体与补拍](references/stage-contract.md#参考媒体与补拍)。
 只有所有权或过期传播不清楚时，才读核心所有权契约。
@@ -128,8 +129,26 @@ license: MIT
 
 时长表示剪辑意图。只有明确的计时算术可以机械检查；一般的可拍性必须结合本镜内容判断。
 
-### 6. 默认每镜一个冻结关键帧
+### 6. 场次故事板 previs sheet（shots → sheet）
 
+镜头定案后，把一个场次的镜头分组画成一张 6–9 格的**粗略 previs 故事板**（读
+[storyboard-sheet.md](references/storyboard-sheet.md)）：用
+[storyboard-sheet-template.jsonl](assets/storyboard-sheet-template.jsonl) 写结构化来源，发布为
+`剧集/<EP>/storyboard/storyboard-sheets.jsonl`，再用
+[storyboard-sheet-prompts.md](assets/storyboard-sheet-prompts.md) 渲染可复制文本。
+
+- 每格 `shot_ref` 一对一映一个镜头，格顺序=场内先后；场次镜头超过格上限就拆多张 sheet。
+- 每格只投影镜头 start beat（不含 end 事实），配红/蓝/绿/橙/黄/黑颜色标注承载运动、机位、
+  构图、光向、VFX 与镜头笔记的意图。
+- sheet 是规划草图，纸面本体黑白、不上最终画风；可用 `scene_visual_plan_ref` 投影已接受的
+  文字场次计划，但不拥有镜头 purpose/duration/边界与身份地理事实。
+
+sheet 只做整场调度 previs，不新增故事/资产事实，也不改镜头边界。普通短场次镜头少时可省
+sheet，直接进关键帧；密集调度或动作戏建议先出 sheet 再逐格渲首帧。
+
+### 7. 默认每镜一个冻结关键帧（每格 → 一张干净首帧）
+
+有故事板 sheet 时，每格投影成对应镜头的一张干净最终首帧（首帧法保留）。
 使用 [keyframe-template.jsonl](assets/keyframe-template.jsonl) 写结构化来源，发布为
 `剧集/<EP>/storyboard/keyframes.jsonl`；再用
 [keyframe-prompts.md](assets/keyframe-prompts.md) 渲染可复制的派生文本。结构化关键帧
@@ -141,7 +160,7 @@ license: MIT
 关键帧不得包含“先、再、最后”、表演变化过程、运镜过程或正在变化的环境；时间变化
 交给 `$short-drama-video-prompts`。
 
-### 7. 校验并呈现
+### 8. 校验并呈现
 
 先做原文落实、参考图权限和连续性的结构检查，再按制作资料自检。
 候选预览也必须精确加总逐镜数值时长；若仍有未定时长或尚未完成这笔账，宁可省略总时长并
@@ -183,9 +202,10 @@ python3 <skill-dir>/scripts/storyboard_check.py 剧集/EP001/storyboard/coverage
 
 1. 尚未落实的原文与 `unresolved` 项；
 2. 按场分组的镜头表；
-3. 可复制的关键帧提示词；
-4. 相对剧本原意发生的差异；
-5. 需要创作者接受的选择。
+3. 场次故事板 previs（若本集做了 sheet）；
+4. 可复制的关键帧提示词；
+5. 相对剧本原意发生的差异；
+6. 需要创作者接受的选择。
 
 本技能不能自行终审；终审交给 `$short-drama-review`。
 
@@ -215,5 +235,7 @@ python3 <skill-dir>/scripts/storyboard_check.py 剧集/EP001/storyboard/coverage
   默认不进执行交付包；accepted 后打包时显式传 `--omit`，不会按文件名静默排除）
 - `剧集/<EP>/storyboard/scene-visual-plans/<SC>.jsonl`（仅关键场次需要场次计划时；每场独立接受）
 - `剧集/<EP>/storyboard/shots.jsonl`
+- `剧集/<EP>/storyboard/storyboard-sheets.jsonl`（仅在做了 previs 故事板的场次）
+- `剧集/<EP>/storyboard/storyboard-sheet-prompts.md`（仅派生文本）
 - `剧集/<EP>/storyboard/keyframes.jsonl`
 - `剧集/<EP>/storyboard/keyframe-prompts.md`（仅派生文本）
