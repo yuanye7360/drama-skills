@@ -787,6 +787,24 @@ def _relative_path(value: str | Path, *, allow_operations: bool = False) -> str:
     return relative
 
 
+def _is_staging_source(relative: str) -> bool:
+    """Return whether a project-relative path is a publication scratch source.
+
+    Publish forces source != target, so a candidate must be written somewhere
+    before it can be published. `.short-drama/tmp/` is the sanctioned scratch
+    area: sources there feed content only (never a durable dependency edge) and
+    are removed once the commit lands, so nothing accumulates in the project
+    root. Anything else under `.short-drama/` stays refused as a source.
+    """
+
+    parts = PurePosixPath(relative).parts
+    return (
+        len(parts) >= 3
+        and parts[0].casefold() == ".short-drama"
+        and parts[1].casefold() == "tmp"
+    )
+
+
 def _root_role(name: str) -> str | None:
     """Return one stable machine role for either Chinese or legacy root names."""
 
@@ -4084,32 +4102,71 @@ def _parse_cli_pairs(values: Iterable[str], *, label: str) -> dict[str, str]:
     return parsed
 
 
+def _cleanup_staging_sources(root: Path, sources: Iterable[Path]) -> None:
+    """Remove consumed `.short-drama/tmp/` sources and any emptied subdirs.
+
+    Runs only after the publication commits. The tmp root itself is preserved;
+    pruning stops there and at the first non-empty directory, so unrelated
+    scratch files staged by another in-flight publication are left untouched.
+    """
+
+    tmp_root = root / ".short-drama" / "tmp"
+    for source_path in sources:
+        try:
+            source_path.unlink()
+        except FileNotFoundError:
+            pass
+        parent = source_path.parent
+        while parent != tmp_root and tmp_root in parent.parents:
+            try:
+                parent.rmdir()
+            except OSError:
+                break
+            parent = parent.parent
+
+
 def _publish_from_cli(args: argparse.Namespace) -> dict[str, Any]:
     root = find_project(args.path)
     bindings = _parse_cli_pairs(args.outputs, label="output")
     outputs: dict[str, bytes] = {}
     inputs = _parse_cli_pairs(args.inputs or [], label="input")
+    staging_sources: list[Path] = []
     for raw_target, raw_source in bindings.items():
         target = _relative_path(raw_target)
-        source = _relative_path(raw_source)
+        # A source may live in the `.short-drama/tmp/` scratch area; any other
+        # path under `.short-drama/` stays refused as a source.
+        source = _relative_path(raw_source, allow_operations=True)
+        if (
+            PurePosixPath(source).parts[0].casefold() == ".short-drama"
+            and not _is_staging_source(source)
+        ):
+            raise ValueError(
+                "publication source under .short-drama must live in "
+                f".short-drama/tmp/: {source}"
+            )
         if target == source:
             raise ValueError("candidate source and publication target must differ")
         source_path = _project_path(root, source)
         if source_path.is_symlink() or not source_path.is_file():
             raise ValueError(f"candidate source is unavailable: {source}")
         source_hash = sha256_file(source_path)
+        outputs[target] = source_path.read_bytes()
+        if _is_staging_source(source):
+            # Scratch content only — never recorded as a durable dependency,
+            # so deleting it after commit leaves no dangling input reference.
+            staging_sources.append(source_path)
+            continue
         previous = inputs.get(source)
         if previous is not None and previous != source_hash:
             raise ValueError(f"input hash does not match candidate source: {source}")
         inputs[source] = source_hash
-        outputs[target] = source_path.read_bytes()
     records: dict[str, list[str]] = {}
     for value in args.input_records or []:
         key, separator, selector = value.partition("=")
         if not separator or not key or not selector:
             raise ValueError("input record must use PATH=SELECTOR")
         records.setdefault(_relative_path(key), []).append(selector)
-    return publish_candidate(
+    result = publish_candidate(
         root,
         owner=args.owner,
         artifact_id=args.artifact_id,
@@ -4118,6 +4175,8 @@ def _publish_from_cli(args: argparse.Namespace) -> dict[str, Any]:
         input_hashes=inputs,
         input_records=records or None,
     )
+    _cleanup_staging_sources(root, staging_sources)
+    return result
 
 
 def build_parser() -> argparse.ArgumentParser:

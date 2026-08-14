@@ -547,6 +547,70 @@ class PublicLifecycleCliTests(unittest.TestCase):
             )
             self.assertNotEqual(rejected.returncode, 0)
 
+    def test_publish_consumes_and_cleans_staging_source_under_operational_tmp(
+        self,
+    ) -> None:
+        # The publish CLI forces source != target, so a candidate must first be
+        # written somewhere before it can be published. `.short-drama/tmp/` is
+        # the sanctioned scratch area; publish must accept a source there and
+        # remove it (plus the emptied subdirectories) once the commit lands, so
+        # no `_publish_tmp*` residue accumulates in the project root.
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.make_project(directory)
+            staging = root / ".short-drama/tmp/write/screenplay.md"
+            staging.parent.mkdir(parents=True, exist_ok=True)
+            staging.write_text("# 第一集\n\n门被推开。\n", encoding="utf-8")
+
+            _, result = self.run_cli(
+                "publish",
+                str(root),
+                "--owner",
+                "short-drama-write",
+                "--artifact-id",
+                "EP001:script",
+                "--output",
+                "剧集/EP001/screenplay.md=.short-drama/tmp/write/screenplay.md",
+            )
+
+            assert result is not None
+            self.assertEqual(
+                (root / "剧集/EP001/screenplay.md").read_text(encoding="utf-8"),
+                "# 第一集\n\n门被推开。\n",
+            )
+            # Staging source and its emptied parent are cleaned; tmp root stays.
+            self.assertFalse(staging.exists())
+            self.assertFalse(staging.parent.exists())
+            self.assertTrue((root / ".short-drama/tmp").is_dir())
+            # A throwaway staging source is not a durable dependency edge.
+            transaction = (
+                root / ".short-drama/transactions" / str(result["transaction_id"])
+            )
+            manifest = json.loads(
+                (transaction / "manifest.json").read_text(encoding="utf-8")
+            )
+            self.assertNotIn(
+                ".short-drama/tmp/write/screenplay.md",
+                {entry["path"] for entry in manifest["read_set"]},
+            )
+
+    def test_publish_refuses_operational_source_outside_tmp(self) -> None:
+        # Only the tmp scratch area is a legal operational source. Reading state
+        # or WAL files as a publication source must stay refused.
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.make_project(directory)
+            result, _ = self.run_cli(
+                "publish",
+                str(root),
+                "--owner",
+                "short-drama-write",
+                "--artifact-id",
+                "EP001:script",
+                "--output",
+                "剧集/EP001/screenplay.md=.short-drama/state.json",
+                expected_code=2,
+            )
+            self.assertIn(".short-drama/tmp", result.stderr)
+
     def test_publish_rejects_invalid_structured_candidates(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = self.make_project(directory)

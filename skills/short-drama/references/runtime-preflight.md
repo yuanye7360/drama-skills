@@ -31,6 +31,9 @@ python3 <core>/scripts/project_tool.py status <project>
 ## 3. 只通过公开生命周期写入
 
 - 负责人用 `publish` 原子发布候选，并给每个外部结构化引用提供精确 input hash。
+- `publish` 要求来源与目标不同，候选内容要先落到临时来源再发布。临时来源统一放
+  `.short-drama/tmp/<阶段>/`，`publish` 会在提交后自动清理；不要在项目根建
+  `_publish_tmp*` 目录，那会堆积成不会被清理的垃圾。
 - 上游接受引用不继承候选状态；`authority:candidate` 只用于同次发布的目标或明确的
   候选预览链，后者在接受前必须已由同 hash 的上游接受快照闭合。
 - 创作者接受、独立审查和内容修订是不同动作；审查者发布 finding/verdict，不改负责人的来源。
