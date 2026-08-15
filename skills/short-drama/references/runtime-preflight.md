@@ -2,26 +2,23 @@
 
 无论从主技能还是子技能进入，都先完成同一套轻量预检。它只检查安装完整性、项目事务状态和已记录的精确引用，不评价创作内容。
 
-## 1. 验证当前安装
+## 1. 一条命令完成安装验证、恢复与状态
 
 从 `suite-ref.json` 解析到逻辑安装路径中的 core 后，用当前可用的 Python 3 解释器运行：
 
 ```bash
-python3 <core>/scripts/suite_verify.py <core>
+python3 <core>/scripts/project_tool.py preflight <project>
 ```
 
-若环境的 Python 3 命令名不同，使用该环境已经提供的等价解释器。验证器必须沿逻辑安装路径逐一检查清单中的八个技能；混装、缺件、额外可执行文件或 hash 不一致时停止写入。不要退回源码检出目录“借用”通过验证的兄弟技能。
+若环境的 Python 3 命令名不同，使用该环境已经提供的等价解释器。它依次做三件事，语义与拆成三条命令时完全相同：
 
-## 2. 恢复事务，再读状态
+1. 运行同一个 `suite_verify`，沿逻辑安装路径逐一检查清单中的八个技能；混装、缺件、额外可执行文件或 hash 不一致时非零退出，停止写入。不要退回源码检出目录“借用”通过验证的兄弟技能。
+2. 先恢复未完成事务（等价于 `recover`，可重复执行），再读状态。`next_action` 为 `resolve_blocked_transactions` 时同样非零退出：保持创作者文件原样并先处理冲突，不要绕过 WAL、手改状态文件或假定上次写入成功。
+3. 返回 `project` 状态摘要，其中的 accepted/candidate 指针和阻断项是后续工作的当前事实。还没有项目时返回 `project: null` 与 `next_action: initialize`，这是正常入口状态，不是错误。
 
-定位项目根目录后，先运行：
+`suite_verify`、`recover`、`status` 仍可单独运行来诊断某一环，但常规入口只用这一条：三次往返变一次，检查一项不少。
 
-```bash
-python3 <core>/scripts/project_tool.py recover <project>
-python3 <core>/scripts/project_tool.py status <project>
-```
-
-`recover` 可重复执行。若它报告 blocked，保持创作者文件原样并先处理冲突；不要绕过 WAL、手改状态文件或假定上次写入成功。`status` 中的 accepted/candidate 指针和阻断项是后续工作的当前事实。
+**不要把 `suite-manifest.json` 读进上下文**。它是一份纯 hash 清单，唯一用途是被验证器逐条比对；读进来既不能替代校验，又会挤占本可留给创作内容的篇幅。同理不要直读 `.short-drama/state.json`——它随产物数量线性增长，而状态摘要不会。
 
 同时读取 `status.layout`。`mode=canonical` 使用返回的中文 `roots`，`mode=legacy`
 使用返回的旧版英文 `roots`；`mode=mixed` 时停止发布，先合并平行目录。所有负责技能都沿用

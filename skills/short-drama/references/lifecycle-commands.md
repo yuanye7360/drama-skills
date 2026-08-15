@@ -12,15 +12,31 @@
 从 `short-drama` 技能安装目录调用脚本，不依赖当前工作目录：
 
 ```text
+python3 <short-drama-skill-dir>/scripts/project_tool.py preflight <project>
 python3 <short-drama-skill-dir>/scripts/project_tool.py init <project> --title <title>
 python3 <short-drama-skill-dir>/scripts/project_tool.py status <project>
 python3 <short-drama-skill-dir>/scripts/project_tool.py recover <project>
-python3 <short-drama-skill-dir>/scripts/project_tool.py publish <project> --owner short-drama-write --artifact-id EP001:script --output 剧集/EP001/screenplay.md=输入/EP001-screenplay.candidate.md [--input <upstream-path>=<sha256> ...] [--input-record <upstream-path>=<record-id> ...]
-python3 <short-drama-skill-dir>/scripts/project_tool.py accept <project> --artifact-id EP001:script --decision accepted --target 剧集/EP001/screenplay.md=<candidate-sha256> --evidence-artifact 创作者决策/EP001-script.json --evidence-hash <decision-file-sha256> --evidence-record-id <decision-id>
-python3 <short-drama-skill-dir>/scripts/project_tool.py review <project> --artifact-id EP001:script --verdict approve --target 剧集/EP001/screenplay.md=<accepted-sha256> --verdict-owner short-drama-review --verdict-artifact 审查/EP001-verdict.json --verdict-hash <verdict-file-sha256>
+python3 <short-drama-skill-dir>/scripts/project_tool.py publish <project> --owner short-drama-write --artifact-id EP001:script --output 剧集/EP001/screenplay.md=输入/EP001-screenplay.candidate.md [--input <upstream-path>=<sha256> ...] [--auto-input <upstream-path> ...] [--input-record <upstream-path>=<record-id> ...]
+python3 <short-drama-skill-dir>/scripts/project_tool.py accept <project> --artifact-id EP001:script --decision accepted --target 剧集/EP001/screenplay.md=<candidate-sha256> --evidence-artifact 创作者决策/EP001-script.json --evidence-hash auto --evidence-record-id <decision-id>
+python3 <short-drama-skill-dir>/scripts/project_tool.py review <project> --artifact-id EP001:script --verdict approve --target 剧集/EP001/screenplay.md=<accepted-sha256> --verdict-owner short-drama-review --verdict-artifact 审查/EP001-verdict.json --verdict-hash auto
 python3 <short-drama-skill-dir>/scripts/project_tool.py package <project> --episode EP001 --include <accepted-path> [...] [--omit <accepted-path> ...]
 python3 <short-drama-skill-dir>/scripts/project_tool.py verify <project> --episode EP001
 ```
+
+## 不要手工搬运的 hash
+
+三处 hash 现在由工具自己算，语义不变——它们本来就会被比对到活文件，手抄一遍只是多一次
+往返：
+
+- `publish --auto-input <path>`：按活文件算 input hash。`--input <path>=<sha256>` 仍可用，
+  两者同时给出且不一致时报错，所以显式钉版本仍然有效。
+- `accept --evidence-hash auto`、`review --verdict-hash auto`：按活文件算证据/结论文件的
+  hash。给字面 hash 时按给的走。
+- `publish` 的返回值新增 `targets`，即本次写入的每个目标路径及其 `sha256`。`accept
+  --target` 直接抄它，不必再单独算一次。
+
+`accept --target` 与 `review --target` 保持显式：它们钉的是**创作者接受的是哪一版候选**，
+自动解析成“当前候选”会让期间被重新发布的版本被静默接受，这不是搬运，是保证。
 
 ## Dashboard 启动
 

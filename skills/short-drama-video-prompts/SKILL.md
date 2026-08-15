@@ -10,9 +10,10 @@ license: MIT
 
 ## 先定位套件
 
-从本技能目录读取 `suite-ref.json`，按其中相对 `core_manifest` 定位唯一同级主技能与
-套件清单；确认声明的 core、contract、recipe 和清单 hash 一致后再读写项目。
-随后执行 [阶段契约](references/stage-contract.md) 的运行时预检：先恢复事务、读取状态，再进入本阶段。
+从本技能目录读取 `suite-ref.json`，按其中相对 `core_manifest` 定位唯一同级主技能，
+再跑一次 [阶段契约](references/stage-contract.md) 的运行时预检命令：它一次验证安装、恢复
+事务并读取状态。**不要把 `suite-manifest.json` 读进上下文**——那是一份纯 hash 清单，
+校验由验证器完成，读它只会占用本可以留给创作内容的篇幅。
 该文件同时给出本阶段的所有权边界、需要从制作形态取得哪些输入，以及本阶段规则表；本技能不读取其他技能的文件。
 
 ## 进入条件与权属

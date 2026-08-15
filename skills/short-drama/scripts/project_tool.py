@@ -13,6 +13,7 @@ import argparse
 import contextlib
 import hashlib
 import importlib
+import importlib.util
 import json
 import os
 import re
@@ -1970,6 +1971,63 @@ def recover_project(path: Path) -> dict[str, Any]:
     }
 
 
+def _verify_installation() -> dict[str, Any]:
+    """Run the suite verifier that ships beside this script.
+
+    The core directory is taken from ``__file__`` without resolving symlinks,
+    for the reason ``suite_verify.verify_suite`` states: resolving would switch
+    verification back to a source checkout and could miss a sibling skill
+    linked from a different version.
+    """
+
+    core = Path(__file__).absolute().parent.parent
+    module_path = core / "scripts" / "suite_verify.py"
+    specification = importlib.util.spec_from_file_location(
+        "short_drama_suite_verify", module_path
+    )
+    if specification is None or specification.loader is None:
+        raise FileNotFoundError(f"suite verifier is unavailable: {module_path}")
+    module = importlib.util.module_from_spec(specification)
+    specification.loader.exec_module(module)
+    return dict(module.verify_suite(core))
+
+
+def preflight(path: Path) -> dict[str, Any]:
+    """Verify the installation, finish interrupted work, then read state.
+
+    This is the entry check every skill runs, in one call instead of three.
+    It performs exactly what `suite_verify` + `recover` + `status` performed
+    separately and adds no judgement of its own: the same verifier runs, the
+    same recovery runs first, and the same status is read afterwards.
+    """
+
+    install = _verify_installation()
+    try:
+        root = find_project(path)
+    except FileNotFoundError:
+        # No project yet is a normal entry state, not an error: initialization
+        # is a legitimate next action and must not cost a second command.
+        return {"install": install, "project": None, "next_action": "initialize"}
+    recovery = recover_project(root)
+    status = _project_status_from_root(root)
+    result: dict[str, Any] = {"install": install, "project": status}
+    # Recovery output is normally empty. Reporting it only when something
+    # actually happened keeps the common case small without hiding a repair.
+    acted = [
+        item
+        for item in recovery["results"]
+        if not item.get("already_recovered") or item["status"] == "blocked"
+    ]
+    if acted:
+        result["recovered"] = acted
+    result["next_action"] = (
+        "resolve_blocked_transactions"
+        if recovery["blocked"]
+        else status["recovery"]["next_action"]
+    )
+    return result
+
+
 def _validate_scene_scoped_record_path(relative: str, record: Any) -> None:
     """Keep the two per-scene directing layers attached to their filename.
 
@@ -3012,6 +3070,11 @@ def publish_candidate(
         "authority": "candidate",
         "owner": owner,
         "artifact_id": artifact_id,
+        # The hashes just written. `accept` needs exactly these to pin the
+        # version the creator saw; returning them here removes a separate
+        # hashing round trip without loosening that pin, which still has to
+        # match the recorded candidate.
+        "targets": dict(sorted(candidate_hashes.items())),
     }
 
 
@@ -4125,11 +4188,45 @@ def _cleanup_staging_sources(root: Path, sources: Iterable[Path]) -> None:
             parent = parent.parent
 
 
+AUTO_HASH = "auto"
+
+
+def _resolve_evidence_hash(path: Path, artifact: str, value: str) -> str:
+    """Resolve the `auto` sentinel to the live hash of an evidence file.
+
+    Lifecycle evidence hashes are verified against the live file anyway
+    (`_normalize_artifact_ref`), so computing one here is exactly what the
+    caller would paste after hashing the file themselves. A literal hash is
+    returned untouched, so an explicitly pinned version still wins.
+    """
+
+    if value != AUTO_HASH:
+        return value
+    root = find_project(path)
+    relative = _relative_path(artifact)
+    evidence_path = _project_path(root, relative)
+    if evidence_path.is_symlink() or not evidence_path.is_file():
+        raise ValueError(f"evidence artifact is unavailable: {relative}")
+    return sha256_file(evidence_path)
+
+
 def _publish_from_cli(args: argparse.Namespace) -> dict[str, Any]:
     root = find_project(args.path)
     bindings = _parse_cli_pairs(args.outputs, label="output")
     outputs: dict[str, bytes] = {}
     inputs = _parse_cli_pairs(args.inputs or [], label="input")
+    for raw_auto in args.auto_inputs or []:
+        relative = _relative_path(raw_auto)
+        auto_path = _project_path(root, relative)
+        # `_relative_path` already refuses every `.short-drama/**` path, so the
+        # scratch area cannot become a durable dependency edge through this flag.
+        if auto_path.is_symlink() or not auto_path.is_file():
+            raise ValueError(f"auto input is unavailable: {relative}")
+        computed = sha256_file(auto_path)
+        declared = inputs.get(relative)
+        if declared is not None and declared != computed:
+            raise ValueError(f"input hash does not match live file: {relative}")
+        inputs[relative] = computed
     staging_sources: list[Path] = []
     for raw_target, raw_source in bindings.items():
         target = _relative_path(raw_target)
@@ -4189,6 +4286,15 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--language", default="zh-CN")
     init.add_argument("--aspect-ratio", default="9:16")
 
+    preflight_parser = subparsers.add_parser(
+        "preflight",
+        help=(
+            "Entry check in one call: verify the installation, recover "
+            "interrupted work, then read project state."
+        ),
+    )
+    preflight_parser.add_argument("path", type=Path, nargs="?", default=Path("."))
+
     status = subparsers.add_parser("status", help="Print a creator-safe project summary.")
     status.add_argument("path", type=Path, nargs="?", default=Path.cwd())
 
@@ -4214,6 +4320,17 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         dest="inputs",
         help="Bind an additional exact project input as PATH=SHA256.",
+    )
+    publish.add_argument(
+        "--auto-input",
+        action="append",
+        dest="auto_inputs",
+        help=(
+            "Bind an existing project file as an input and compute its SHA-256 "
+            "here. Publication already refuses any --input whose hash differs "
+            "from the live file, so this removes the transcription step without "
+            "weakening the check. Staging scratch is refused, as it is for --input."
+        ),
     )
     publish.add_argument(
         "--allow-unregistered-path",
@@ -4244,7 +4361,16 @@ def build_parser() -> argparse.ArgumentParser:
     accept.add_argument("--decision", required=True, choices=("accepted", "rejected"))
     accept.add_argument("--target", action="append", required=True, dest="targets")
     accept.add_argument("--evidence-artifact", required=True)
-    accept.add_argument("--evidence-hash", required=True)
+    accept.add_argument(
+        "--evidence-hash",
+        required=True,
+        help=(
+            "SHA-256 of the decision file, or `auto` to hash it here. The hash "
+            "is verified against the live file either way; `auto` only removes "
+            "the transcription step. --target stays explicit on purpose: it "
+            "pins which candidate the creator accepted."
+        ),
+    )
     accept.add_argument("--evidence-record-id")
     accept.add_argument("--evidence-field")
 
@@ -4261,7 +4387,15 @@ def build_parser() -> argparse.ArgumentParser:
     review.add_argument("--target", action="append", required=True, dest="targets")
     review.add_argument("--verdict-owner", required=True)
     review.add_argument("--verdict-artifact", required=True)
-    review.add_argument("--verdict-hash", required=True)
+    review.add_argument(
+        "--verdict-hash",
+        required=True,
+        help=(
+            "SHA-256 of the verdict file, or `auto` to hash it here. As with "
+            "acceptance evidence, the hash is verified against the live file "
+            "either way; --target stays explicit."
+        ),
+    )
     review.add_argument("--verdict-record-id")
 
     package = subparsers.add_parser("package", help="Package approved text/JSON artifacts.")
@@ -4297,6 +4431,8 @@ def main(argv: list[str] | None = None) -> int:
                 language=args.language,
                 aspect_ratio=args.aspect_ratio,
             )
+        elif args.command == "preflight":
+            result = preflight(args.path)
         elif args.command == "status":
             result = project_status(args.path)
         elif args.command == "recover":
@@ -4311,7 +4447,9 @@ def main(argv: list[str] | None = None) -> int:
             evidence_ref = {
                 "owner": "creator",
                 "artifact": args.evidence_artifact,
-                "hash": args.evidence_hash,
+                "hash": _resolve_evidence_hash(
+                    args.path, args.evidence_artifact, args.evidence_hash
+                ),
             }
             if args.evidence_record_id:
                 evidence_ref["record_id"] = args.evidence_record_id
@@ -4328,7 +4466,9 @@ def main(argv: list[str] | None = None) -> int:
             verdict_ref = {
                 "owner": args.verdict_owner,
                 "artifact": args.verdict_artifact,
-                "hash": args.verdict_hash,
+                "hash": _resolve_evidence_hash(
+                    args.path, args.verdict_artifact, args.verdict_hash
+                ),
             }
             if args.verdict_record_id:
                 verdict_ref["record_id"] = args.verdict_record_id
@@ -4355,10 +4495,13 @@ def main(argv: list[str] | None = None) -> int:
                 omitted_paths=args.omissions,
             )
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
-        # `verify` is the only subcommand that reports a verdict in its payload
-        # instead of raising, so it needs the same exit convention the check
-        # scripts use: a tampered package must fail a CI step or an && chain.
+        # `verify` and `preflight` report a verdict in their payload instead of
+        # raising, so they need the same exit convention the check scripts use:
+        # a tampered package or a blocked transaction must fail an && chain
+        # rather than let the next stage write on top of unrecovered work.
         if result.get("status") == "tampered":
+            return 1
+        if result.get("next_action") == "resolve_blocked_transactions":
             return 1
         return 0
     except (

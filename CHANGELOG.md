@@ -117,6 +117,33 @@
 
 ### 新增
 
+- **入口预检合并为一条 `preflight` 命令**。此前每个阶段入口都要跑三条命令
+  （`suite_verify` → `recover` → `status`），且每条都是一次独立往返。现在
+  `project_tool.py preflight <project>` 一次完成同样三件事：跑同一个验证器检查同一套
+  清单、先恢复未完成事务、再返回状态摘要。检查一项不少——混装/缺件/hash 不一致仍然
+  非零退出，未恢复的事务同样以 `next_action: resolve_blocked_transactions` 非零退出，
+  让它能中断 `&&` 链而不是让下一阶段写在未恢复的工作上面。还没有项目时返回
+  `project: null` 与 `next_action: initialize`，这是正常入口状态，不再需要第二条命令去
+  确认。`suite_verify`、`recover`、`status` 仍可单独运行来诊断某一环。
+
+- **三处 hash 不再需要手工搬运**。它们本来就会被比对到活文件，手抄一遍只是多一次往返，
+  不产生任何额外保证：
+  - `publish --auto-input <path>`：按活文件算 input hash。`--input <path>=<sha256>` 仍
+    可用；两者同时给出且不一致时报错，所以显式钉版本依然有效。
+  - `accept --evidence-hash auto` 与 `review --verdict-hash auto`：按活文件算证据/结论
+    文件的 hash。给字面 hash 时按给的走，错的仍然被拒。
+  - `publish` 的返回值新增 `targets`（本次写入的每个目标路径及其 `sha256`），
+    `accept --target` 直接抄它即可。
+
+  `accept --target` 与 `review --target` **保持显式**：它们钉的是创作者接受的是哪一版
+  候选，自动解析成「当前候选」会让期间被重新发布的版本被静默接受。那不是搬运，是保证。
+
+- **明令不要把 `suite-manifest.json` 读进上下文**。它是一份纯 hash 清单，唯一用途是被
+  验证器逐条比对；读进来既不能替代校验，又会挤占本可以留给创作内容的篇幅。核心与七个
+  子技能的入口段落、七份阶段契约的运行时预检节都已改写为「跑 `preflight`」。同理不要
+  直读 `.short-drama/state.json`：它按产物数量线性增长（实测 8 个产物约 6.7KB），而状态
+  摘要不随产物数量增长。
+
 - **能力说明的第三种状态**：`production-prompt-grammar` 的「按已知能力调整写法」此前只有
   支持/不支持两态，漏掉了中间那一段——仍在允许范围内、但需要反复重试才拿到可用结果的
   不稳定区。它最容易被漏掉，因为它不报错：允许范围的上界回答「能不能提交」，稳定区的上界

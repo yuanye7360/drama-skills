@@ -173,6 +173,258 @@ class PublicLifecycleCliTests(unittest.TestCase):
         for command in ("publish", "accept", "review"):
             self.assertIn(command, result.stdout)
 
+    def test_preflight_verifies_recovers_and_reads_state_in_one_call(self) -> None:
+        """One entry call must carry the same facts the three commands did."""
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.make_project(directory)
+
+            _, combined = self.run_cli("preflight", str(root))
+            _, separate = self.run_cli("status", str(root))
+
+            assert combined is not None and separate is not None
+            install = combined["install"]
+            assert isinstance(install, dict)
+            # The same verifier, over the same declared skill set.
+            self.assertEqual(install["suite"], "short-drama-suite")
+            self.assertEqual(len(install["checked_skills"]), 8)
+            self.assertEqual(combined["project"], separate)
+            self.assertEqual(combined["next_action"], "continue")
+            # Nothing was interrupted, so no repair log is emitted.
+            self.assertNotIn("recovered", combined)
+
+    def test_preflight_without_a_project_asks_for_initialization(self) -> None:
+        """No project is a normal entry state, not an error worth a second call."""
+
+        with tempfile.TemporaryDirectory() as directory:
+            _, result = self.run_cli("preflight", directory)
+
+            assert result is not None
+            self.assertIsNone(result["project"])
+            self.assertEqual(result["next_action"], "initialize")
+            self.assertIn("suite", result["install"])
+
+    def test_preflight_fails_loudly_on_an_unrecoverable_transaction(self) -> None:
+        """A blocked transaction must break an && chain, like a tampered package."""
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.make_project(directory)
+            transaction = root / ".short-drama/transactions" / ("a" * 32)
+            transaction.mkdir(parents=True)
+            (transaction / "manifest.json").write_text("{ broken", encoding="utf-8")
+
+            _, result = self.run_cli("preflight", str(root), expected_code=1)
+
+            assert result is not None
+            self.assertEqual(result["next_action"], "resolve_blocked_transactions")
+            recovered = result["recovered"]
+            assert isinstance(recovered, list)
+            self.assertEqual(recovered[0]["status"], "blocked")
+
+    def test_publish_returns_the_hashes_it_just_wrote(self) -> None:
+        """`accept --target` needs these; returning them saves a hashing round trip."""
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.make_project(directory)
+            source = root / "inputs/screenplay.md"
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text("# 第一集\n\n门被推开。\n", encoding="utf-8")
+
+            _, result = self.run_cli(
+                "publish",
+                str(root),
+                "--owner",
+                "short-drama-write",
+                "--artifact-id",
+                "EP001:script",
+                "--output",
+                "episodes/EP001/screenplay.md=inputs/screenplay.md",
+            )
+
+            assert result is not None
+            self.assertEqual(
+                result["targets"],
+                {"episodes/EP001/screenplay.md": digest(root / "episodes/EP001/screenplay.md")},
+            )
+
+    def test_auto_input_records_what_a_hand_written_input_hash_would(self) -> None:
+        """`--auto-input` is transcription only: the recorded read set is identical."""
+
+        read_sets = []
+        for flag in ("--input", "--auto-input"):
+            with tempfile.TemporaryDirectory() as directory:
+                root = self.make_project(directory)
+                upstream = root / "bible/characters.jsonl"
+                upstream.parent.mkdir(parents=True, exist_ok=True)
+                upstream.write_text('{"character_id":"CH-001"}\n', encoding="utf-8")
+                source = root / "inputs/shots.jsonl"
+                source.parent.mkdir(parents=True, exist_ok=True)
+                source.write_text('{"shot_id":"SH-001"}\n', encoding="utf-8")
+                binding = (
+                    "bible/characters.jsonl"
+                    if flag == "--auto-input"
+                    else f"bible/characters.jsonl={digest(upstream)}"
+                )
+
+                _, result = self.run_cli(
+                    "publish",
+                    str(root),
+                    "--owner",
+                    "short-drama-storyboard",
+                    "--artifact-id",
+                    "EP001:shots",
+                    "--output",
+                    "episodes/EP001/storyboard/shots.jsonl=inputs/shots.jsonl",
+                    flag,
+                    binding,
+                )
+
+                assert result is not None
+                manifest = json.loads(
+                    (
+                        root
+                        / ".short-drama/transactions"
+                        / str(result["transaction_id"])
+                        / "manifest.json"
+                    ).read_text(encoding="utf-8")
+                )
+                read_sets.append(
+                    {entry["path"]: entry["expected_hash"] for entry in manifest["read_set"]}
+                )
+
+        self.assertEqual(read_sets[0], read_sets[1])
+        self.assertIn("bible/characters.jsonl", read_sets[1])
+
+    def test_auto_input_refuses_a_contradicting_explicit_hash(self) -> None:
+        """An explicitly pinned version still wins over a convenience flag."""
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.make_project(directory)
+            upstream = root / "bible/characters.jsonl"
+            upstream.parent.mkdir(parents=True, exist_ok=True)
+            upstream.write_text('{"character_id":"CH-001"}\n', encoding="utf-8")
+            source = root / "inputs/shots.jsonl"
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text('{"shot_id":"SH-001"}\n', encoding="utf-8")
+
+            failure, _ = self.run_cli(
+                "publish",
+                str(root),
+                "--owner",
+                "short-drama-storyboard",
+                "--artifact-id",
+                "EP001:shots",
+                "--output",
+                "episodes/EP001/storyboard/shots.jsonl=inputs/shots.jsonl",
+                "--input",
+                f"bible/characters.jsonl={'0' * 64}",
+                "--auto-input",
+                "bible/characters.jsonl",
+                expected_code=2,
+            )
+
+            self.assertIn("input hash does not match live file", failure.stderr)
+
+    def test_auto_input_refuses_scratch_and_missing_files(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.make_project(directory)
+            scratch = root / ".short-drama/tmp/storyboard/shots.jsonl"
+            scratch.parent.mkdir(parents=True, exist_ok=True)
+            scratch.write_text('{"shot_id":"SH-001"}\n', encoding="utf-8")
+            source = root / "inputs/shots.jsonl"
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text('{"shot_id":"SH-001"}\n', encoding="utf-8")
+            arguments = [
+                "publish",
+                str(root),
+                "--owner",
+                "short-drama-storyboard",
+                "--artifact-id",
+                "EP001:shots",
+                "--output",
+                "episodes/EP001/storyboard/shots.jsonl=inputs/shots.jsonl",
+            ]
+
+            scratch_failure, _ = self.run_cli(
+                *arguments,
+                "--auto-input",
+                ".short-drama/tmp/storyboard/shots.jsonl",
+                expected_code=2,
+            )
+            missing_failure, _ = self.run_cli(
+                *arguments, "--auto-input", "bible/absent.jsonl", expected_code=2
+            )
+
+            self.assertIn("operational state cannot be a publication target", scratch_failure.stderr)
+            self.assertIn("auto input is unavailable", missing_failure.stderr)
+
+    def test_evidence_hash_auto_equals_the_hash_a_creator_would_paste(self) -> None:
+        """`auto` resolves the live file; a wrong literal hash is still refused."""
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.make_project(directory)
+            source = root / "inputs/screenplay.md"
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text("# 第一集\n\n门被推开。\n", encoding="utf-8")
+            _, published = self.run_cli(
+                "publish",
+                str(root),
+                "--owner",
+                "short-drama-write",
+                "--artifact-id",
+                "EP001:script",
+                "--output",
+                "episodes/EP001/screenplay.md=inputs/screenplay.md",
+            )
+            assert published is not None
+            targets = published["targets"]
+            assert isinstance(targets, dict)
+            decision = root / "creator-decisions/EP001-script.json"
+            decision.parent.mkdir(parents=True, exist_ok=True)
+            decision.write_text(
+                json.dumps(
+                    {
+                        "decision_id": "CD-EP001-script",
+                        "decision_kind": "artifact_acceptance",
+                        "artifact_id": "EP001:script",
+                        "status": "accepted",
+                        "target_hashes": targets,
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            accept = [
+                "accept",
+                str(root),
+                "--artifact-id",
+                "EP001:script",
+                "--decision",
+                "accepted",
+                "--target",
+                f"episodes/EP001/screenplay.md={targets['episodes/EP001/screenplay.md']}",
+                "--evidence-artifact",
+                "creator-decisions/EP001-script.json",
+                "--evidence-record-id",
+                "CD-EP001-script",
+            ]
+
+            wrong, _ = self.run_cli(
+                *accept, "--evidence-hash", "0" * 64, expected_code=2
+            )
+            self.run_cli(*accept, "--evidence-hash", "auto")
+
+            self.assertIn("evidence ref hash does not match live file", wrong.stderr)
+            state = json.loads(
+                (root / ".short-drama/state.json").read_text(encoding="utf-8")
+            )
+            record = state["artifacts"]["EP001:script"]
+            self.assertEqual(record["creator_acceptance"], "accepted")
+            self.assertEqual(
+                record["creator_decision"]["evidence_ref"]["hash"], digest(decision)
+            )
+
     def test_new_projects_use_chinese_creator_directories(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = self.make_project(directory)

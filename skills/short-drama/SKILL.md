@@ -12,10 +12,12 @@ license: MIT
 ## 每次请求的起点
 
 1. 使用用户明确路径，或从当前目录向上寻找最近的 `short-drama.json`。
-2. 从本技能安装目录找到同一套件的其他技能，读取 `suite-manifest.json`；缺少技能或版本混用时先停止变更。
-3. 只读 `short-drama.json` 与 `.short-drama/state.json` 摘要；不要一次加载全部创作文件。
-4. 执行 `status` 或写入前先运行事务恢复。发现外部编辑冲突时保留原文件，提供
-   `adopt`、`restore`、`merge` 三种处理，不静默覆盖。
+2. 跑一次 `scripts/project_tool.py preflight`：它一次验证安装、恢复未完事务并读取状态。
+   缺少技能或版本混用时它非零退出，先停止变更。**不要把 `suite-manifest.json` 读进
+   上下文**——那是一份纯 hash 清单，校验由验证器完成，读它只挤占创作内容的篇幅。
+3. 只看 preflight 返回的状态摘要；不要一次加载全部创作文件，也不要直读
+   `.short-drama/state.json`——它按产物数量线性增长，摘要不会。
+4. 发现外部编辑冲突时保留原文件，提供 `adopt`、`restore`、`merge` 三种处理，不静默覆盖。
 5. 按创作者当前任务路由；不强制补走整条流水线。
 
 入口、检查点、修订和交付见 [creator-workflow.md](references/creator-workflow.md)。
@@ -119,9 +121,10 @@ Markdown 作为文稿阅读和编辑；结构化数据转换为卡片；图片�
 
 | 命令 | 用途 |
 |---|---|
+| `preflight` | 常规入口：一次完成安装验证、事务恢复与状态读取 |
 | `init` | 初始化最小项目 |
-| `status` | 读取生命周期与恢复摘要 |
-| `recover` | 恢复全部或指定事务 |
+| `status` | 读取生命周期与恢复摘要（`preflight` 已含，单独诊断时才用） |
+| `recover` | 恢复全部或指定事务（同上） |
 | `publish` | 通过预写日志发布 `candidate`，不附带接受或审查结论 |
 | `accept` | 用创作者决定记录接受准确的 `candidate` 目标 |
 | `review` | 用独立审查结论更新校验与审查状态 |
