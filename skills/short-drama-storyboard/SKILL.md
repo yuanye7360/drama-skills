@@ -126,8 +126,13 @@ license: MIT
 镜头定案后，把一个场次的镜头分组画成一张 6–9 格的**粗略 previs 故事板**（读
 [storyboard-sheet.md](references/storyboard-sheet.md)）：用
 [storyboard-sheet-template.jsonl](assets/storyboard-sheet-template.jsonl) 写结构化来源，发布为
-`剧集/<EP>/storyboard/storyboard-sheets.jsonl`，再用
-[storyboard-sheet-prompts.md](assets/storyboard-sheet-prompts.md) 渲染可复制文本。
+`剧集/<EP>/storyboard/storyboard-sheets.jsonl`。可复制文本**不要手写**，由脚本按
+[storyboard-sheet-prompts.md](assets/storyboard-sheet-prompts.md) 的格式渲染：
+
+```bash
+python3 <skill-dir>/scripts/render_prompts.py sheets 剧集/EP001/storyboard/storyboard-sheets.jsonl \
+  --episode EP001 --out .short-drama/tmp/storyboard/storyboard-sheet-prompts.md
+```
 
 - 每格 `shot_ref` 一对一映一个镜头，格顺序=场内先后；场次镜头超过格上限就拆多张 sheet。
 - 每格只投影镜头 start beat（不含 end 事实），配红/蓝/绿/橙/黄/黑颜色标注承载运动、机位、
@@ -142,9 +147,18 @@ sheet，直接进关键帧；密集调度或动作戏建议先出 sheet 再逐�
 
 有故事板 sheet 时，每格投影成对应镜头的一张干净最终首帧（首帧法保留）。
 使用 [keyframe-template.jsonl](assets/keyframe-template.jsonl) 写结构化来源，发布为
-`剧集/<EP>/storyboard/keyframes.jsonl`；再用
-[keyframe-prompts.md](assets/keyframe-prompts.md) 渲染可复制的派生文本。结构化关键帧
-保存只属于单帧的选择；Markdown 不是第二份事实来源。
+`剧集/<EP>/storyboard/keyframes.jsonl`。结构化关键帧保存只属于单帧的选择；Markdown
+不是第二份事实来源——所以**不要手写它**，由脚本按
+[keyframe-prompts.md](assets/keyframe-prompts.md) 的格式渲染：
+
+```bash
+python3 <skill-dir>/scripts/render_prompts.py keyframes 剧集/EP001/storyboard/keyframes.jsonl \
+  --shots 剧集/EP001/storyboard/shots.jsonl \
+  --episode EP001 --out .short-drama/tmp/storyboard/keyframe-prompts.md
+```
+
+可复制提示词正文写在记录的 `generic_prompt` 里，渲染器逐字投影，不改写、不补写。
+渲染器缺字段就报错而不是留空行：报错说明该修的是结构化来源，不是派生文本。
 
 把已接受镜头的开始边界和准确资产版本，落到一个可以同时存在的瞬间：焦点、构图、
 摄影机与镜头焦段、空间锚点、姿态、目光、双手与持物、表情、光线、排除项。
@@ -176,6 +190,17 @@ python3 <skill-dir>/scripts/storyboard_check.py 剧集/EP001/storyboard/coverage
 脚本报错时先修产物再继续；它不评价镜头好坏，也不决定该拆多少镜。需要逐条查诊断码
 含义、或确认某项该由脚本判还是由审查者判时，读
 [review-and-fixtures.md](references/review-and-fixtures.md)。
+
+派生文本是否仍与已接受记录一致，同样是纯记账，用 `--check` 判定，不要人工比对：
+
+```bash
+python3 <skill-dir>/scripts/render_prompts.py keyframes 剧集/EP001/storyboard/keyframes.jsonl \
+  --shots 剧集/EP001/storyboard/shots.jsonl --episode EP001 \
+  --check 剧集/EP001/storyboard/keyframe-prompts.md
+```
+
+它报 `stale` 就说明有人手改了派生文本，或记录已更新而文本没有重渲：重新渲染即可；
+若那处改动本该保留，先把它写回结构化来源，再重渲。
 
 候选选择清单必须覆盖正文中全部新增导演选择；没有必要让创作者判断的环境微动、具体手位或
 声音时机就删除，不能一面写进可执行提示词，一面在接受摘要中省略。
