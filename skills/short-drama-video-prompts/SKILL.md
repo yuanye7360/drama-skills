@@ -180,7 +180,27 @@ python3 <skill-dir>/scripts/motion_timing_check.py \
 - `剧集/<EP>/storyboard/delivery-containers.jsonl`：**仅当项目声明了多镜交付容器时**，
   记录容器成员顺序、各成员已接受时长的只读引用与容器时长，模板见
   [delivery-container.jsonl.md](assets/delivery-container.jsonl.md)；
-- `剧集/<EP>/storyboard/video-prompts.md`：由已接受规格、容器记录和配方 `hash` 生成的文本版本。
+- `剧集/<EP>/storyboard/video-prompts.md`：由已接受规格、容器记录和配方 `hash` 生成的
+  文本版本。它是缓存，**不要手写**，由脚本按 [Markdown 模板](assets/video-prompts.md)
+  的格式渲染：
+
+  ```bash
+  python3 <skill-dir>/scripts/render_prompts.py motions 剧集/EP001/storyboard/motion-specs.jsonl \
+    --shots 剧集/EP001/storyboard/shots.jsonl \
+    --episode EP001 --out .short-drama/tmp/video-prompts/video-prompts.md
+  ```
+
+  可复制提示词正文写在记录的 `generic_prompt` 里，渲染器逐字投影，不改写、不补写；
+  缺必填字段就报错而不是留空行，报错说明该修的是规格本身。项目声明多镜容器时，
+  用 `containers` 子命令渲染容器一节。
+
+派生文本是否仍与已接受规格一致，用 `--check` 判定，不要人工比对：
+
+```bash
+python3 <skill-dir>/scripts/render_prompts.py motions 剧集/EP001/storyboard/motion-specs.jsonl \
+  --shots 剧集/EP001/storyboard/shots.jsonl --episode EP001 \
+  --check 剧集/EP001/storyboard/video-prompts.md
+```
 
 自然语言改提示词时，先展示规格字段怎样变化和重新生成的文本预览；若改动触碰分镜或
 剧本负责的内容，保持当前文件不变，并把修改请求交给对应技能。跨文件发布遵循主技能的

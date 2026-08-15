@@ -117,6 +117,19 @@
 
 ### 新增
 
+- **派生提示词文本改由脚本渲染**。`keyframe-prompts.md`、`storyboard-sheet-prompts.md`、
+  `video-prompts.md`、`image-prompts.md` 在契约里一直是「缓存 / 派生文本，不是第二份事实
+  来源」，但渲染动作由模型完成，代价有两笔：同一句提示词被写两遍（一遍进记录的
+  `generic_prompt`，一遍进 Markdown），而且两份可以不一致——**创作者读并批准的是
+  Markdown，记录在案的是 JSONL**，于是「被批准的提示词」和「被交付的提示词」可以是两个
+  东西。三个技能各新增一个 `scripts/render_prompts.py`：只投影已接受记录里已有的字段，
+  逐字搬运 `generic_prompt`，不改写、不补写、不重排；缺必填字段时报错退出而不是留空行，
+  因为那说明该修的是结构化来源。
+
+- **`--check` 让「这份文本是缓存」变成一条命令能判定的事实**。它重新渲染并与磁盘上的
+  文件比对，不一致就以 `stale` 非零退出。此前这条规则只能靠审查者注意到，现在手改派生
+  文本或改了记录却没重渲，都会被机械检出。
+
 - **入口预检合并为一条 `preflight` 命令**。此前每个阶段入口都要跑三条命令
   （`suite_verify` → `recover` → `status`），且每条都是一次独立往返。现在
   `project_tool.py preflight <project>` 一次完成同样三件事：跑同一个验证器检查同一套

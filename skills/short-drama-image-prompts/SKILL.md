@@ -109,6 +109,16 @@ license: MIT
   Look Development 使用，后者为派生文本；
 - `剧集/<EP>/assets/image-prompt-specs.jsonl`：权威规格；
 - `剧集/<EP>/assets/image-prompts.md`：由已接受规格和配方 `hash` 重新生成的文本版本。
+  它是缓存，**不要手写**，由脚本按 [Markdown 模板](assets/image-prompts.md) 的格式渲染；
+  可复制正文写在规格的 `generic_prompt` 里，渲染器逐字投影，缺必填字段就报错而不是留空行：
+
+  ```bash
+  python3 <skill-dir>/scripts/render_prompts.py 剧集/EP001/assets/image-prompt-specs.jsonl \
+    --episode EP001 --out .short-drama/tmp/image-prompts/image-prompts.md
+  ```
+
+  派生文本是否仍与已接受规格一致，用 `--check <已发布的 image-prompts.md>` 判定，
+  不要人工比对；它报 `stale` 说明有人手改了派生文本，或规格已更新而文本没有重渲。
 
 跨文件发布遵循主技能的提交与恢复流程；不得以半成品覆盖已接受版本。
 

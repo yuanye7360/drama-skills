@@ -354,5 +354,390 @@ class RenderPromptsTests(unittest.TestCase):
             self.assertFalse(out.exists())
 
 
+VIDEO_SCRIPT = SUITE / "skills/short-drama-video-prompts/scripts/render_prompts.py"
+VIDEO_SPEC = importlib.util.spec_from_file_location(
+    "short_drama_render_video_prompts", VIDEO_SCRIPT
+)
+assert VIDEO_SPEC and VIDEO_SPEC.loader
+render_video = importlib.util.module_from_spec(VIDEO_SPEC)
+VIDEO_SPEC.loader.exec_module(render_video)
+
+MOTION_PROMPT = (
+    "从她的手悬在合同上方开始。手指先收紧，再整只手离开纸面；她抬眼对上对方。"
+    "摄影机固定，不移动。在 3.5 秒内让犹豫—决定—开口各占一段。"
+)
+
+
+def motion_shot() -> dict[str, object]:
+    return {"shot_id": "SHOT-012", "purpose": "让观众先看见她的犹豫，再看见她改变主意"}
+
+
+def motion_record() -> dict[str, object]:
+    return {
+        "motion_id": "MOTION-012",
+        "status": "accepted",
+        "shot_ref": {
+            "artifact": "剧集/EP001/storyboard/shots.jsonl",
+            "hash": "b" * 64,
+            "record_id": "SHOT-012",
+            "owner": "short-drama-storyboard",
+        },
+        "keyframe_ref": {
+            "artifact": "剧集/EP001/storyboard/keyframes.jsonl",
+            "hash": "a" * 64,
+            "record_id": "KEY-012A",
+            "owner": "short-drama-storyboard",
+        },
+        "boundary_refs": {
+            "duration": {
+                "artifact": "剧集/EP001/storyboard/shots.jsonl",
+                "hash": "b" * 64,
+                "record_id": "SHOT-012",
+                "field": "/duration_seconds",
+                "value_seconds": 3.5,
+                "owner": "short-drama-storyboard",
+            },
+            "next_start": {
+                "artifact": "剧集/EP001/storyboard/shots.jsonl",
+                "hash": "b" * 64,
+                "record_id": "SHOT-013",
+                "field": "/start_boundary",
+                "access": "comparison_only",
+                "owner": "short-drama-storyboard",
+            },
+        },
+        "reference_bindings": [
+            {
+                "slot_id": "REF-1",
+                "order": 1,
+                "artifact_ref": {
+                    "owner": "short-drama-storyboard",
+                    "artifact": "剧集/EP001/storyboard/keyframes.jsonl",
+                    "hash": "a" * 64,
+                    "record_id": "KEY-012A",
+                },
+                "role": "start_frame",
+                "may_control": ["起始构图"],
+                "must_not_control": ["终态"],
+                "admission_status": "unverified",
+                "reference_observation_ref": None,
+                "unresolved_risks": ["水印"],
+            }
+        ],
+        "audio": [
+            {
+                "source_ref": {
+                    "artifact": "剧集/EP001/screenplay-index.jsonl",
+                    "hash": "c" * 64,
+                    "owner": "short-drama-write",
+                    "record_id": "BLK-EP001-SC01-D03",
+                },
+                "kind": "dialogue",
+                "exact_text": "这不是我签的。",
+                "delivery_or_spatial_intent": "压低",
+                "timing": "后半段",
+            }
+        ],
+        "end_report": {
+            "projection": {
+                "pose": "直立",
+                "position": "桌前",
+                "gaze": "对视",
+                "hands": "右手离纸",
+                "held_props": "无",
+                "visible_state": "合同被推回",
+            },
+            "comparison": "match",
+            "source_end_hash": "b" * 64,
+            "differences": [],
+        },
+        "creator_overrides": [],
+        "generic_prompt": MOTION_PROMPT,
+        "derivation": {
+            "recipe_version": "2.0.1",
+            "input_hashes": ["b" * 64],
+            "rendered_hash": "f" * 64,
+        },
+    }
+
+
+class RenderVideoPromptsTests(unittest.TestCase):
+    def render(self, motion: dict[str, object] | None = None) -> str:
+        return render_video.render_motions(
+            [motion or motion_record()],
+            [motion_shot()],
+            episode="EP001",
+            source_hash="0" * 64,
+        )
+
+    def test_prompt_and_read_only_facts_are_projected_verbatim(self) -> None:
+        document = self.render()
+
+        self.assertIn(f"> {MOTION_PROMPT}", document)
+        self.assertIn("## `SHOT-012` · 让观众先看见她的犹豫，再看见她改变主意", document)
+        self.assertIn("- **时长（只读）**：`3.5s`", document)
+        self.assertIn("- **边界核对**：`end match`", document)
+        self.assertIn("- **声音引用**：dialogue:BLK-EP001-SC01-D03", document)
+        self.assertIn("- **下一镜**：仅比较 `SHOT-013`，未改写", document)
+
+    def test_a_plain_master_omits_the_coverage_line(self) -> None:
+        """`普通母版省略"覆盖范围"一行` — no `master` placeholder bookkeeping."""
+
+        self.assertNotIn("覆盖范围", self.render())
+
+    def test_a_pickup_declares_its_coverage_scope(self) -> None:
+        pickup = motion_record()
+        pickup["coverage_scope"] = {
+            "mode": "pickup",
+            "master_motion_id": "MOTION-012",
+            "supplements_motion_ids": [],
+            "source_obligations": [
+                {
+                    "kind": "reaction",
+                    "source_ref": {"record_id": "BLK-EP001-SC01-R02"},
+                    "disposition": "covered_now",
+                    "motion_field": "/ordered_subject_motion",
+                }
+            ],
+            "replacement_intent": "does_not_replace_master",
+        }
+
+        document = self.render(pickup)
+
+        self.assertIn("- **覆盖范围（仅补拍/替代版）**：`pickup`", document)
+        self.assertIn("BLK-EP001-SC01-R02 → /ordered_subject_motion/covered_now", document)
+
+    def test_a_motion_without_its_shot_is_refused(self) -> None:
+        orphan = motion_record()
+        orphan["shot_ref"] = {"record_id": "SHOT-999", "hash": "b" * 64}
+
+        with self.assertRaisesRegex(render_video.RenderError, "unknown shot"):
+            self.render(orphan)
+
+    def test_a_missing_duration_is_refused_not_guessed(self) -> None:
+        undated = motion_record()
+        boundaries = undated["boundary_refs"]
+        assert isinstance(boundaries, dict)
+        del boundaries["duration"]["value_seconds"]  # type: ignore[index]
+
+        with self.assertRaisesRegex(render_video.RenderError, "value_seconds"):
+            self.render(undated)
+
+    def test_containers_project_member_order_and_duration(self) -> None:
+        container = {
+            "container_id": "CONT-01",
+            "status": "accepted",
+            "members": [
+                {
+                    "order": 2,
+                    "shot_ref": {"record_id": "SHOT-013", "hash": "b" * 64},
+                    "motion_ref": {"record_id": "MOTION-013"},
+                    "accepted_duration": 2.0,
+                },
+                {
+                    "order": 1,
+                    "shot_ref": {"record_id": "SHOT-012", "hash": "b" * 64},
+                    "motion_ref": {"record_id": "MOTION-012"},
+                    "accepted_duration": 3.5,
+                },
+            ],
+            "container_duration": 5.5,
+        }
+
+        document = render_video.render_containers(
+            [container], episode="EP001", source_hash="0" * 64
+        )
+
+        # Declared order wins over file order; the renderer never re-sequences
+        # by position in the file.
+        self.assertIn("## 容器 `CONT-01` · 成员 `SHOT-012,SHOT-013` · 5.5s", document)
+        self.assertLess(document.index("SHOT-012 @"), document.index("SHOT-013 @"))
+
+    def test_check_mode_detects_a_hand_edited_prompt(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            motions = write_jsonl(root / "motion-specs.jsonl", [motion_record()])
+            shots = write_jsonl(root / "shots.jsonl", [motion_shot()])
+            rendered = root / "video-prompts.md"
+            arguments = [
+                sys.executable,
+                str(VIDEO_SCRIPT),
+                "motions",
+                str(motions),
+                "--shots",
+                str(shots),
+                "--episode",
+                "EP001",
+            ]
+            subprocess.run(
+                [*arguments, "--out", str(rendered)], check=True, capture_output=True
+            )
+            rendered.write_text(
+                rendered.read_text(encoding="utf-8").replace("摄影机固定", "摄影机缓推"),
+                encoding="utf-8",
+            )
+
+            drifted = subprocess.run(
+                [*arguments, "--check", str(rendered)], capture_output=True, text=True
+            )
+
+            self.assertEqual(drifted.returncode, 1)
+            self.assertEqual(json.loads(drifted.stdout)["status"], "stale")
+
+
+IMAGE_SCRIPT = SUITE / "skills/short-drama-image-prompts/scripts/render_prompts.py"
+IMAGE_SPEC = importlib.util.spec_from_file_location(
+    "short_drama_render_image_prompts", IMAGE_SCRIPT
+)
+assert IMAGE_SPEC and IMAGE_SPEC.loader
+render_image = importlib.util.module_from_spec(IMAGE_SPEC)
+IMAGE_SPEC.loader.exec_module(render_image)
+
+IMAGE_PROMPT = (
+    "写实都市剧风格锁。三视图人物参考：二十八岁女性，左颊有一道浅疤，"
+    "深灰西装外套袖口磨白。中性灰背景，均匀布光。保持疤痕位置与袖口磨损；排除任何配饰。"
+)
+
+
+def image_spec(*, with_edit: bool = False) -> dict[str, object]:
+    spec: dict[str, object] = {
+        "spec_id": "IMG-001",
+        "status": "accepted",
+        "purpose": "character_sheet",
+        "asset_binding": {
+            "identity_ref": {
+                "owner": "short-drama-assets",
+                "artifact": "设定集/characters.jsonl",
+                "hash": "c" * 64,
+                "record_id": "CHAR-001",
+            },
+            "variant_ref": {
+                "owner": "short-drama-assets",
+                "artifact": "设定集/character-looks.jsonl",
+                "hash": "d" * 64,
+                "record_id": "LOOK-003",
+            },
+        },
+        "intent": {"reuse_job": "全剧人物身份基准", "audience": "分镜与视频阶段"},
+        "reference_bindings": [],
+        "text_handling": {
+            "source_policy_ref": {
+                "artifact": "设定集/props.jsonl",
+                "hash": "e" * 64,
+                "field": "/text_policy",
+                "owner": "short-drama-assets",
+                "record_id": "PROP-014",
+            },
+            "source_mode": "no_readable_text",
+            "render_treatment": {"mode": "blank"},
+        },
+        "creator_overrides": [],
+        "generic_prompt": IMAGE_PROMPT,
+        "recipe": {"name": "character-sheet", "version": "1.4.0", "hash": "a" * 64},
+        "derivation": {
+            "input_hashes": ["c" * 64],
+            "renderer": "generic-markdown",
+            "rendered_hash": "f" * 64,
+        },
+        "provenance": "creator_project",
+    }
+    if with_edit:
+        spec["edit"] = {
+            "changes": ["左袖口新增血迹"],
+            "preserve": ["面部", "疤痕位置", "构图"],
+            "continuity_impact": "PSTATE-007",
+            "target_ref": {
+                "owner": "short-drama-image-prompts",
+                "artifact": "设定集/image-prompt-specs.jsonl",
+                "hash": "b" * 64,
+                "record_id": "IMG-001",
+                "field": "/generic_prompt",
+            },
+            "entity_or_region": "左袖口",
+        }
+    return spec
+
+
+class RenderImagePromptsTests(unittest.TestCase):
+    def test_prompt_and_bindings_are_projected_verbatim(self) -> None:
+        document = render_image.render_specs(
+            [image_spec()], episode="EP001", source_hash="0" * 64
+        )
+
+        self.assertIn(f"> {IMAGE_PROMPT}", document)
+        self.assertIn("## `CHAR-001` · `character_sheet`", document)
+        self.assertIn("- **规格**：`IMG-001`", document)
+        self.assertIn("- **绑定**：`CHAR-001` + `LOOK-003`", document)
+        self.assertIn("- **用途**：全剧人物身份基准", document)
+        self.assertIn("- **文字来源政策**：`no_readable_text`", document)
+        self.assertIn("- **参考图用途**：无", document)
+        self.assertIn("> 配方：`character-sheet@1.4.0`", document)
+
+    def test_a_plain_sheet_omits_the_edit_section(self) -> None:
+        """`非变体可省略` — no empty variant bookkeeping on a base plate."""
+
+        document = render_image.render_specs(
+            [image_spec()], episode="EP001", source_hash="0" * 64
+        )
+
+        self.assertNotIn("变体/编辑说明", document)
+
+    def test_an_edit_declares_its_preserve_set(self) -> None:
+        document = render_image.render_specs(
+            [image_spec(with_edit=True)], episode="EP001", source_hash="0" * 64
+        )
+
+        self.assertIn("### 变体/编辑说明", document)
+        self.assertIn("- **变化**：左袖口新增血迹", document)
+        self.assertIn("- **必须保持**：面部 / 疤痕位置 / 构图", document)
+        self.assertIn("- **连续性影响**：PSTATE-007", document)
+
+    def test_a_missing_prompt_is_refused_not_blanked(self) -> None:
+        incomplete = image_spec()
+        del incomplete["generic_prompt"]
+
+        with self.assertRaisesRegex(render_image.RenderError, "generic_prompt"):
+            render_image.render_specs(
+                [incomplete], episode="EP001", source_hash="0" * 64
+            )
+
+    def test_mixed_recipes_are_refused(self) -> None:
+        other = image_spec()
+        other["spec_id"] = "IMG-002"
+        other["recipe"] = {"name": "prop-plate", "version": "9.9.9", "hash": "a" * 64}
+
+        with self.assertRaisesRegex(render_image.RenderError, "one recipe"):
+            render_image.render_specs(
+                [image_spec(), other], episode="EP001", source_hash="0" * 64
+            )
+
+    def test_check_mode_detects_a_hand_edited_prompt(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            specs = write_jsonl(root / "image-prompt-specs.jsonl", [image_spec()])
+            rendered = root / "image-prompts.md"
+            arguments = [
+                sys.executable,
+                str(IMAGE_SCRIPT),
+                str(specs),
+                "--episode",
+                "EP001",
+            ]
+            subprocess.run(
+                [*arguments, "--out", str(rendered)], check=True, capture_output=True
+            )
+            rendered.write_text(
+                rendered.read_text(encoding="utf-8").replace("中性灰背景", "纯白背景"),
+                encoding="utf-8",
+            )
+
+            drifted = subprocess.run(
+                [*arguments, "--check", str(rendered)], capture_output=True, text=True
+            )
+
+            self.assertEqual(drifted.returncode, 1)
+            self.assertEqual(json.loads(drifted.stdout)["status"], "stale")
+
+
 if __name__ == "__main__":
     unittest.main()
