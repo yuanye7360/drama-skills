@@ -12,8 +12,26 @@ license: MIT
 
 从本技能目录读取 `suite-ref.json`，按其中相对 `core_manifest` 定位唯一同级主技能与
 套件清单；确认声明的 core、contract、recipe 和清单 hash 一致后再读写项目。
-随后执行 [阶段契约](references/stage-contract.md) 的运行时预检：先恢复事务、读取状态，再进入本阶段。
-该文件同时给出本阶段的所有权边界与规则表；本技能不读取其他技能的文件。
+随后执行 [阶段契约的运行时预检](references/stage-contract.md#运行时预检)：先恢复事务、读取状态，再进入本阶段。
+本技能不读取其他技能的文件。
+
+## 读取纪律
+
+每次执行**只必读**本 SKILL.md 与上面那一节预检。其余参考文件按下表触发条件加读，
+**只读命中的小节**，没有触发条件就不要预读——预读参考文件不会让剧本更好，只会让这一步更慢。
+
+| 触发条件 | 加读 |
+|---|---|
+| 要判断某个变化归不归本阶段管 | [所有权边界](references/stage-contract.md#所有权边界) |
+| 从已接受分集规划写作，需核对契约字段 | [单集契约与题材边界](references/stage-contract.md#单集契约与题材边界上游输入) |
+| 修订或自检阶段规则 | [本阶段规则](references/stage-contract.md#本阶段规则) |
+| 某个场景的功能、转向或退出状态卡住 | [script-craft.md](references/script-craft.md) 的对应小节 |
+| 某段对白写不出策略、潜台词或人物差异 | [dialogue-craft.md](references/dialogue-craft.md) 的对应小节 |
+| 不确定场景标题、生产标签或索引写法 | [screenplay-format.md](references/screenplay-format.md) 的对应小节 |
+| 创作者交来行业方言稿或要求以方言交付 | [production-format-dialect.md](references/production-format-dialect.md) |
+| 声音本身承担戏剧转向 | [scene-sound-dramaturgy.md](references/scene-sound-dramaturgy.md) |
+| 创作者标注某个兑现可能需要更换 | [substitutable-realization.md](references/substitutable-realization.md) |
+| 长单集要跨多轮续写或中断恢复 | [scene-handoff-capsule.md](references/scene-handoff-capsule.md) |
 
 ## 先判断入口
 
@@ -67,9 +85,12 @@ diff，让创作者明确选择 authority 迁移，将 standalone 契约标记 s
 
 ### 4. 先定场景功能，再写正文
 
-对每个场景先回答：为什么必须存在、谁的议程对撞、哪个可见动作承载冲突、哪里发生方向性变化、退出状态给下游留下什么。需要场景与可见行动方法时读取 [script-craft.md](references/script-craft.md)。
+对每个场景先回答：为什么必须存在、谁的议程对撞、哪个可见动作承载冲突、哪里发生方向性变化、退出状态给下游留下什么。
+这五问答得出来就直接写，不必先读方法文件；答不出来的那一问才去
+[script-craft.md](references/script-craft.md) 查对应小节（场景发动机看 §3、内在意义看 §4、节奏看 §6）。
 
-写对白前读取 [dialogue-craft.md](references/dialogue-craft.md)，尤其检查人物策略、潜台词、信息争夺和声音差异。
+对白同理：先按人物此刻的策略写，卡在潜台词、信息争夺或人物声音分不开时，才查
+[dialogue-craft.md](references/dialogue-craft.md) 的对应小节（台词即行动 §3、潜台词 §4、人物声音 §6）。
 当声源、环境撤出、主动留白、画外存在或相邻场 sound bridge 承担戏剧转向时，读取
 [scene-sound-dramaturgy.md](references/scene-sound-dramaturgy.md)。剧本只拥有故事必需的声音事实，
 不替分镜设计逐镜声轨，也不用配乐替代表演。
@@ -85,7 +106,9 @@ diff，让创作者明确选择 authority 迁移，将 standalone 契约标记 s
 
 ### 5. 写唯一剧本源
 
-复制 [screenplay.md](assets/screenplay.md)，严格按 [screenplay-format.md](references/screenplay-format.md) 写：
+复制 [screenplay.md](assets/screenplay.md)，按下面四条写。这四条就是格式契约的常用部分，
+够写完一集；遇到它没覆盖的情况（注释与未知内容、规范化入口、发布前检查）再查
+[screenplay-format.md](references/screenplay-format.md) 的对应小节。
 
 - `## EP001-SC001 内 · 地点 · 时间`；
 - 现在时、可见可表演的动作；

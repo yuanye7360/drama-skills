@@ -12,8 +12,13 @@ license: MIT
 
 从本技能目录读取 `suite-ref.json`，按其中相对 `core_manifest` 定位唯一同级主技能与
 套件清单；确认声明的 core、contract、recipe 和清单 hash 一致后再读写项目。
-随后执行 [阶段契约](references/stage-contract.md) 的运行时预检：先恢复事务、读取状态，再进入本阶段。
-该文件同时给出本阶段的所有权边界、需要从制作形态取得哪些输入，以及本阶段规则表；本技能不读取其他技能的文件。
+随后执行 [阶段契约的运行时预检](references/stage-contract.md#运行时预检)：先恢复事务、读取状态，再进入本阶段。
+本技能不读取其他技能的文件。
+
+阶段契约的其余小节按需加读，每次入口不必整份读完：判断某个变化归不归本阶段管时读
+[所有权边界](references/stage-contract.md#所有权边界)，需要形态输入时读
+[制作形态需要什么](references/stage-contract.md#制作形态需要什么)，
+自检或定位规则 ID 时读 [本阶段规则](references/stage-contract.md#本阶段规则)。
 
 ## 先判断入口
 
@@ -74,7 +79,14 @@ license: MIT
 
 ### 4. 把系列运动落到分集
 
-读取 [episode-design.md](references/episode-design.md)，再复制 [episode-map.jsonl](assets/episode-map.jsonl)。每一集记录进入状态、当集追求、阻力、因果升级、方向性转折、已兑现回报、出去的压力以及下一集必须继承的事实。
+复制 [episode-map.jsonl](assets/episode-map.jsonl)。每一集记录进入状态、当集追求、阻力、因果升级、方向性转折、已兑现回报、出去的压力以及下一集必须继承的事实。
+
+上面这串字段就是单集契约，照它填即可开工。填不下去的那一项才去
+[episode-design.md](references/episode-design.md) 查对应小节：字段含义看
+[单集契约](references/episode-design.md#3-单集契约)，集尾取向看
+[钩子、兑现与出去的压力](references/episode-design.md#4-钩子兑现与出去的压力)，
+交接对不上看 [集间状态交接](references/episode-design.md#8-集间状态交接)，
+要扩写压缩或重排看 [扩写、压缩与重排](references/episode-design.md#9-扩写压缩与重排)。
 
 先保证每集产生局部戏剧结果、相邻集能精确交接，再讨论外部压力/情感负荷的双轨
 节奏。集数、钩子类型、是否反转和高潮位置由创作者与项目决定。

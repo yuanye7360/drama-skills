@@ -18,8 +18,13 @@ license: MIT
 
 从本技能目录读取 `suite-ref.json`，按其中相对 `core_manifest` 定位唯一同级主技能与
 套件清单；确认声明的 core、contract、recipe 和清单 hash 一致后再读写项目。
-随后执行 [阶段契约](references/stage-contract.md) 的运行时预检：先恢复事务、读取状态，再进入本阶段。
-该文件同时给出本阶段的所有权边界、需要从制作形态取得哪些输入，以及本阶段规则表；本技能不读取其他技能的文件。
+随后执行 [阶段契约的运行时预检](references/stage-contract.md#运行时预检)：先恢复事务、读取状态，再进入本阶段。
+本技能不读取其他技能的文件。
+
+阶段契约的其余小节按需加读，每次入口不必整份读完：判断某个 finding 归不归本阶段管时读
+[所有权边界](references/stage-contract.md#所有权边界)，需要形态输入时读
+[制作形态需要什么](references/stage-contract.md#制作形态需要什么)，
+自检或定位规则 ID 时读 [本阶段规则](references/stage-contract.md#本阶段规则)。
 
 ## 选择审查范围
 
@@ -38,13 +43,20 @@ license: MIT
 只读对应的审查表。`source_analysis` 读
 [rubric-source-analysis.md](references/rubric-source-analysis.md)——它审的是原著分析层
 （索引、快评、逐章提取、剧情单元、人物候选、改编价值与分集候选），不审剧本内容，
-也不替 `$short-drama-develop` 决定改编方案。完整审查先读
-[review-method.md](references/review-method.md)，再读三份审查表；制作端常见缺陷
-与各环节判据见 [production-quality-gates.md](references/production-quality-gates.md)。
+也不替 `$short-drama-develop` 决定改编方案。
+
+审查表按声明的范围加读，一个范围一份，不要因为“顺便”就把三份都读完：
+`story_script` 读 [rubric-story-script.md](references/rubric-story-script.md)，
+`assets_continuity` / `image_prompts` 读 [rubric-assets-prompts.md](references/rubric-assets-prompts.md)，
+`storyboard_keyframes` / `video_prompts` 读 [rubric-visual-motion.md](references/rubric-visual-motion.md)。
+`full_episode` 才是真的要跨层，此时先读 [review-method.md](references/review-method.md) 的
+[跨层综合](references/review-method.md#cross-layer-synthesis) 再取相关审查表。
+[production-quality-gates.md](references/production-quality-gates.md) 是查询用的判据表，
+落到具体缺陷要判“阻断还是记录”时查对应小节，不整份预读。
 有创作者提供或授权形成的生产观察，需要绑定准确版本、诊断并路由项目内校准时读
 [project-calibration.md](references/project-calibration.md)；没有观察记录时只报文字风险。
 涉及参考图权限、遮挡式揭示或补拍版与替代版关系时加读
-[阶段契约](references/stage-contract.md) 的参考媒体与补拍一节。
+[阶段契约的参考媒体与补拍](references/stage-contract.md#参考媒体与补拍)。
 不预先加载所有创作资料。
 证据来自项目产物和已接受限制，而非负责人的自我解释。
 只有审查问题涉及“模板感、重复手法或 AI 味”时才读
