@@ -131,13 +131,14 @@ license: MIT
 
 ### 6. 场次故事板 previs sheet（shots → sheet）
 
-镜头定案后，把一个场次的镜头分组画成一张 6–9 格的**粗略 previs 故事板**（读
+镜头定案后，把一个连续叙事节拍组的镜头画成一张 6–9 格的**粗略 previs 故事板**（读
 [storyboard-sheet.md](references/storyboard-sheet.md)）：用
 [storyboard-sheet-template.jsonl](assets/storyboard-sheet-template.jsonl) 写结构化来源，发布为
 `剧集/<EP>/storyboard/storyboard-sheets.jsonl`，再用
 [storyboard-sheet-prompts.md](assets/storyboard-sheet-prompts.md) 渲染可复制文本。
 
-- 每格 `shot_ref` 一对一映一个镜头，格顺序=场内先后；场次镜头超过格上限就拆多张 sheet。
+- 每格 `shot_ref` 一对一映一个镜头，格顺序=叙事先后；镜头多于格上限就按 `A/B/C…` 拆多张 sheet。
+  一张 sheet 不强求恰好一个场景，边界以连续叙事节拍为准。
 - 每格只投影镜头 start beat（不含 end 事实），配红/蓝/绿/橙/黄/黑颜色标注承载运动、机位、
   构图、光向、VFX 与镜头笔记的意图。
 - sheet 是规划草图，纸面本体黑白、不上最终画风；可用 `scene_visual_plan_ref` 投影已接受的
