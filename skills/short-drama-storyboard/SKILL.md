@@ -18,8 +18,13 @@ license: MIT
 
 从本技能目录读取 `suite-ref.json`，按其中相对 `core_manifest` 定位唯一同级主技能与
 套件清单；确认声明的 core、contract、recipe 和清单 hash 一致后再读写项目。
-随后执行 [阶段契约](references/stage-contract.md) 的运行时预检：先恢复事务、读取状态，再进入本阶段。
-该文件同时给出本阶段的所有权边界、需要从制作形态取得哪些输入，以及本阶段规则表；本技能不读取其他技能的文件。
+随后执行 [阶段契约的运行时预检](references/stage-contract.md#运行时预检)：先恢复事务、读取状态，再进入本阶段。
+本技能不读取其他技能的文件。
+
+阶段契约的其余小节按需加读，每次入口不必整份读完：判断某个变化归不归本阶段管时读
+[所有权边界](references/stage-contract.md#所有权边界)，需要形态输入时读
+[制作形态需要什么](references/stage-contract.md#制作形态需要什么)，
+自检或定位规则 ID 时读 [本阶段规则](references/stage-contract.md#本阶段规则)。
 
 ## 按需读取资料
 
@@ -38,7 +43,7 @@ license: MIT
 [scene-visual-plan.md](references/scene-visual-plan.md)；第一种合理拍法不应直接成为唯一答案时加读
 [coverage-audition.md](references/coverage-audition.md)。
 涉及背影、裁切、遮挡、画外或延迟揭示时读
-[阶段契约](references/stage-contract.md) 的参考媒体与补拍一节。
+[阶段契约的参考媒体与补拍](references/stage-contract.md#参考媒体与补拍)。
 只有所有权或过期传播不清楚时，才读核心所有权契约。
 
 - 竖屏多人、单房对白、证据揭示、群体轴线或门内外视角：

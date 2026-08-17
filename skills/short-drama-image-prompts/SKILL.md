@@ -17,8 +17,13 @@ license: MIT
 
 从本技能目录读取 `suite-ref.json`，按其中相对 `core_manifest` 定位唯一同级主技能与
 套件清单；确认声明的 core、contract、recipe 和清单 hash 一致后再读写项目。
-随后执行 [阶段契约](references/stage-contract.md) 的运行时预检：先恢复事务、读取状态，再进入本阶段。
-该文件同时给出本阶段的所有权边界、需要从制作形态取得哪些输入，以及本阶段规则表；本技能不读取其他技能的文件。
+随后执行 [阶段契约的运行时预检](references/stage-contract.md#运行时预检)：先恢复事务、读取状态，再进入本阶段。
+本技能不读取其他技能的文件。
+
+阶段契约的其余小节按需加读，每次入口不必整份读完：判断某个变化归不归本阶段管时读
+[所有权边界](references/stage-contract.md#所有权边界)，需要形态输入时读
+[制作形态需要什么](references/stage-contract.md#制作形态需要什么)，
+自检或定位规则 ID 时读 [本阶段规则](references/stage-contract.md#本阶段规则)。
 
 ## 进入条件与边界
 
@@ -50,7 +55,7 @@ license: MIT
 | 局部修改或自然语言改提示词 | 加读 [编辑与修订](references/edit-and-revision.md) |
 | 自检、复核、失败诊断 | [审查量表与合成案例](references/review-and-fixtures.md) |
 | 生产端三视图/场景方位/物品版式配方 | [生产资产图配方](references/production-sheet-recipes.md) |
-| 参考图只决定身份、构图或尺度等指定内容 | [阶段契约](references/stage-contract.md) 的参考媒体与补拍 |
+| 参考图只决定身份、构图或尺度等指定内容 | [参考媒体与补拍](references/stage-contract.md#参考媒体与补拍) |
 
 普通资产规格使用 [结构化规格模板](assets/image-prompt-spec.jsonl.md)；Look Development 改用
 [独立风格帧模板](assets/lookdev-frame-spec.jsonl.md) 与

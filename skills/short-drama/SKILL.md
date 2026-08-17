@@ -11,7 +11,8 @@ license: MIT
 创作者可读的内容跟随项目 `short-drama.json#/language`（状态、差异、选择、下一步都算）；
 送给图片/视频生成器的提示词正文跟随 `#/format/prompt_language`（默认 `en`）。
 两者是分开的字段，不要用其中一个推断另一个——`status` 会同时报出这两个值，
-完整规则见 [contract-and-ownership.md](references/contract-and-ownership.md) 的输出语言契约。
+两者取值有疑问时才查 [输出语言契约](references/contract-and-ownership.md#output-language-contract)，
+不必为此读整份契约。
 
 ## 每次请求的起点
 
@@ -22,19 +23,26 @@ license: MIT
    `adopt`、`restore`、`merge` 三种处理，不静默覆盖。
 5. 按创作者当前任务路由；不强制补走整条流水线。
 
-入口、检查点、修订和交付见 [creator-workflow.md](references/creator-workflow.md)。
-每次入口先执行 [runtime-preflight.md](references/runtime-preflight.md)，统一验证安装、恢复事务并读取项目状态。
-所有权、文件过期标记 `stale`、隐私或恢复有疑问时读
-[contract-and-ownership.md](references/contract-and-ownership.md)。
-意图含混时读 [routing-examples.md](references/routing-examples.md)。
-只在需要把规则 ID 定位到负责技能时读
-[knowhow-index.md](references/knowhow-index.md)；路由只负责分派，不代替创作技能判断。
-一张参考图可以决定什么、以及首尾帧契约见 [reference-roles.md](references/reference-roles.md)；
-观众此刻可以知道什么见 [audience-reveal.md](references/audience-reveal.md)；
-补拍与替代版和母版的关系见 [pickup-and-alternate.md](references/pickup-and-alternate.md)。
-不同制作形态的执行翻译见 [production-form-profiles.md](references/production-form-profiles.md)。
-需要在正式分镜前用人物、地点和高压力代表帧统一视觉语言时读
-[look-development.md](references/look-development.md)。
+## 读取纪律
+
+每次入口**只必读** [runtime-preflight.md](references/runtime-preflight.md)（约一页，统一验证安装、
+恢复事务并读取项目状态）与本 SKILL.md。路由的工作是判断意图并分派，绝大多数请求到这里就够了。
+
+其余参考文件按下表触发条件加读，**只读命中的小节**。没有触发条件就不要预读：
+路由预读参考文件不会让分派更准，只会让创作者多等一轮。
+
+| 触发条件 | 加读 |
+|---|---|
+| 创作者问进度、下一步或检查点在哪 | [创作者入口与检查点](references/creator-workflow.md#creator-entry-points) |
+| 要动已确认内容，需列下游影响 | [修订行为](references/creator-workflow.md#revision-behavior) |
+| 所有权、`stale`、隐私或恢复有疑问 | [contract-and-ownership.md](references/contract-and-ownership.md) 的对应小节 |
+| 意图含混，路由表落不下去 | [routing-examples.md](references/routing-examples.md) |
+| 要把某个规则 ID 定位到负责技能 | [knowhow-index.md](references/knowhow-index.md) |
+| 创作者给了参考图，或问首尾帧契约 | [reference-roles.md](references/reference-roles.md) |
+| 要判断观众此刻可以知道什么 | [audience-reveal.md](references/audience-reveal.md) |
+| 处理补拍、替代版与母版的关系 | [pickup-and-alternate.md](references/pickup-and-alternate.md) |
+| 定制作形态，或要把形态翻译成执行 | [production-form-profiles.md](references/production-form-profiles.md) |
+| 要在正式分镜前统一视觉语言 | [look-development.md](references/look-development.md) |
 
 ## 意图路由
 
