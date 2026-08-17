@@ -594,6 +594,23 @@ class PublicLifecycleCliTests(unittest.TestCase):
                 {entry["path"] for entry in manifest["read_set"]},
             )
 
+    def test_staging_cleanup_tolerates_locked_sources(self) -> None:
+        # Cleanup runs only after the publication has committed, so a staging
+        # file the OS refuses to delete (a locked file on Windows, a read-only
+        # directory elsewhere) must not surface as a publish failure; cleanup
+        # stays best-effort and leaves the residue for a later run.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            staging = root / ".short-drama/tmp/write/screenplay.md"
+            staging.parent.mkdir(parents=True)
+            staging.write_text("x", encoding="utf-8")
+            with patch.object(
+                project_tool.Path, "unlink", side_effect=PermissionError("locked")
+            ):
+                project_tool._cleanup_staging_sources(root, [staging])
+            self.assertTrue(staging.exists())
+            self.assertTrue(staging.parent.exists())
+
     def test_publish_refuses_operational_source_outside_tmp(self) -> None:
         # Only the tmp scratch area is a legal operational source. Reading state
         # or WAL files as a publication source must stay refused.

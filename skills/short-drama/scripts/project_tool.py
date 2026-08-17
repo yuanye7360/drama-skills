@@ -4759,6 +4759,12 @@ def _cleanup_staging_sources(root: Path, sources: Iterable[Path]) -> None:
             source_path.unlink()
         except FileNotFoundError:
             pass
+        except OSError:
+            # Cleanup happens after the publication committed; a source the OS
+            # refuses to delete (e.g. a locked file on Windows) must not turn
+            # the successful publish into a reported failure. Leave it for a
+            # later run and skip pruning its directories.
+            continue
         parent = source_path.parent
         while parent != tmp_root and tmp_root in parent.parents:
             try:
@@ -4792,13 +4798,13 @@ def _publish_from_cli(args: argparse.Namespace) -> dict[str, Any]:
         source_path = _project_path(root, source)
         if source_path.is_symlink() or not source_path.is_file():
             raise ValueError(f"candidate source is unavailable: {source}")
-        source_hash = sha256_file(source_path)
         outputs[target] = source_path.read_bytes()
         if _is_staging_source(source):
             # Scratch content only — never recorded as a durable dependency,
             # so deleting it after commit leaves no dangling input reference.
             staging_sources.append(source_path)
             continue
+        source_hash = sha256_file(source_path)
         previous = inputs.get(source)
         if previous is not None and previous != source_hash:
             raise ValueError(f"input hash does not match candidate source: {source}")
