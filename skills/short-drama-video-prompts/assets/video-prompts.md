@@ -55,11 +55,17 @@
 第七节。
 
 ```markdown
-## 容器 `CNT-<id>` · 成员 `SHOT-01,SHOT-02` · <container_duration>s
+## 容器 `CONT-<id>` · 成员 `SHOT-01,SHOT-02` · <container_duration>s
 
 - **成员（只读）**：`SHOT-01 @<hash> <t1>s · SHOT-02 @<hash> <t2>s`（容器时长 = t1+t2）
 - **首帧**：`KEY-<首格>` @ `<hash>`（首帧法起点）
-- **接缝帧**：`KEY-<末格 end>` @ `<hash>`（= 下一容器 `CNT-<id+1>` 的首帧；无下一容器则写“无”）
+- **接缝**：`match_cut | hard_cut | episode_end` 于 `SHOT-<末镜> → SHOT-<下一容器首镜>`
+  - `match_cut`（主体与地点跨接缝不变、动作连续）：写共享接缝帧
+    `KEY-<下一容器首镜 start>` @ `<hash>`（= 下一容器首帧，两容器共享同一帧）
+  - `hard_cut`（主体或地点在接缝改变）：**不共享帧**，写明本容器生成到末镜已接受
+    `end_boundary` 为止、下一容器从其首镜已接受 `start_boundary` 起，两段以剪切相接；
+    执行端要求钉尾帧时，先回分镜为末镜补一张 end 关键帧，不拿下一镜首帧顶替
+  - `episode_end`：写“无后继接缝”
 - **参考图用途**：
   - `角色设计` `role=identity`：只决定角色设计/服装/面部；不导入构图/动作/机位/画风
   - `故事板` `role=action_sequence`：只决定动作顺序/镜头节奏/身体动作/构图/移动方向/镜头角度/视觉进展；不导入身份/服装/面部/最终画风/画面内文字

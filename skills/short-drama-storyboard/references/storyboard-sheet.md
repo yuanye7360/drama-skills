@@ -165,8 +165,12 @@ sheet 把同一策略画成可读多格 previs（可用 `scene_visual_plan_ref` 
 
 sheet 接受后，**每格投影成 `keyframes.jsonl` 里对应镜头的一张干净最终首帧**（首帧法保留，
 配方见 [keyframe-craft.md](keyframe-craft.md)）：keyframe 起首写项目已接受画风的风格锁、绑定
-资产、把本格 previs 构图/机位/动作当 blocking 参考落成正式画面。video 阶段消费 keyframe，
-不直接消费粗草图 sheet。
+资产、把本格 previs 构图/机位/动作当 blocking 参考落成正式画面。
+
+**video 阶段的首帧一律取 keyframe，不取粗草图 sheet。** 唯一的例外是 storyboard-driven 容器的
+**动作顺序参考**（`role=action_sequence`）：项目预算不足时可以直接拿 sheet 当那一条参考，保真较低
+但机制相同（见 video 阶段的交付档案第七节）。这是「参考什么动作顺序」，不是「从哪一帧开始生成」——
+首帧永远是已接受的 keyframe。
 
 ## 失败征兆
 
