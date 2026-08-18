@@ -4,6 +4,10 @@
 每次导出都保存输入 `hash`、配方版本和当前文本 `hash`；文本被手改时，先预览恢复、
 采用或合并的结果。
 
+镜头目的、可见性与边界来源跟随 `short-drama.json#/language`；**可复制提示词正文跟随
+`#/format/prompt_language`（默认 `en`）**，与同阶段
+[故事板 sheet 提示词](storyboard-sheet-prompts.md) 同一个值。
+
 ```markdown
 # EP<编号> · 冻结关键帧提示词
 

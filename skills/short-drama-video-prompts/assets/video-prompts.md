@@ -2,6 +2,9 @@
 
 这是由已接受运动规格生成的文本，不是分镜权威来源。复制引用块即可；元信息帮助核对边界。
 
+元信息与末端说明跟随 `short-drama.json#/language`；**可复制提示词正文跟随
+`#/format/prompt_language`（默认 `en`）**，与上游 keyframe 提示词同一个值。
+
 ```markdown
 # EP<编号> · 视频提示词
 

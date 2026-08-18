@@ -141,6 +141,25 @@ class SkillWiringTests(unittest.TestCase):
             with self.subTest(skill=skill):
                 self.assertIn("#/format/prompt_language", self.skill_text(skill))
 
+    def test_every_copyable_prompt_template_names_the_field_itself(self) -> None:
+        # A skill-level mention is not enough once a stage renders more than one
+        # copyable body. `short-drama-storyboard` named the field for keyframes
+        # only, so the storyboard sheet added later inherited nothing and was
+        # rendered in the creator language while the keyframes beside it stayed
+        # in the prompt language. Each template has to carry the pointer.
+        templates = sorted(
+            path
+            for skill in PROMPT_AUTHORING_SKILLS
+            for path in (SUITE / "skills" / skill / "assets").glob("*prompts.md")
+        )
+        self.assertTrue(templates, "no copyable prompt templates found")
+        for path in templates:
+            with self.subTest(template=path.relative_to(SUITE).as_posix()):
+                self.assertIn(
+                    "#/format/prompt_language",
+                    path.read_text(encoding="utf-8"),
+                )
+
     def test_no_skill_hardcodes_a_creator_facing_language(self) -> None:
         for path in sorted((SUITE / "skills").glob("*/SKILL.md")):
             with self.subTest(skill=path.parent.name):
