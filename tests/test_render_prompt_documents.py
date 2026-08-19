@@ -273,3 +273,92 @@ class ContainerRendererTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+image_renderer = _load(
+    "skills/short-drama-image-prompts/scripts/render_image_prompts.py",
+    "render_image_prompts",
+)
+
+
+def asset_spec(**overrides: Any) -> dict:
+    record: dict[str, Any] = {
+        "spec_id": "IMG-A-001",
+        "purpose": "character_sheet",
+        "asset_binding": {
+            "identity_ref": {"record_id": "CHAR-A"},
+            "variant_ref": {"record_id": "LOOK-A"},
+        },
+        "intent": {"reuse_job": "跨集保持身份", "audience": "分镜阶段"},
+        "reference_bindings": [],
+        "constraints": [],
+        "variant_deltas": [],
+        "generic_prompt": "二维有限动画画风。角色设定板，三视图。",
+    }
+    record.update(overrides)
+    return record
+
+
+class ImagePromptRendererTests(unittest.TestCase):
+    def render(self, specs: list[dict], names: dict[str, str] | None = None) -> str:
+        return image_renderer.render(
+            specs,
+            title="EP001 · 资产图片提示词",
+            source="image-prompt-specs.jsonl",
+            prompt_language="zh",
+            note=None,
+            names=names,
+        )
+
+    def test_intent_renders_as_prose_not_a_mapping(self) -> None:
+        # Printing the mapping leaks Python syntax into a creator document.
+        text = self.render([asset_spec()])
+        self.assertIn("- **用途**：跨集保持身份；分镜阶段", text)
+        self.assertNotIn("{'reuse_job'", text)
+
+    def test_the_heading_prefers_the_asset_display_name(self) -> None:
+        text = self.render([asset_spec()], names={"CHAR-A": "乔凡尼"})
+        self.assertIn("## `乔凡尼` · `character_sheet`", text)
+        self.assertIn("- **绑定**：`CHAR-A` + `LOOK-A`", text)
+
+    def test_a_spec_with_no_variant_records_prints_no_variant_block(self) -> None:
+        # An empty 变体/编辑说明 block reads as a variant with nothing recorded.
+        self.assertNotIn("变体/编辑说明", self.render([asset_spec()]))
+
+    def test_a_variant_delta_must_name_an_observable_change(self) -> None:
+        spec = asset_spec(variant_deltas=[{"field": "wardrobe_layers"}])
+        with self.assertRaises(image_renderer.RenderError):
+            self.render([spec])
+
+    def test_a_reference_binding_without_its_control_split_is_refused(self) -> None:
+        # An unannotated reference is the one that quietly imports composition
+        # or wardrobe from a plate bound only for identity.
+        spec = asset_spec(reference_bindings=[{"slot_id": "REF-1", "order": 1}])
+        with self.assertRaises(image_renderer.RenderError):
+            self.render([spec])
+
+    def test_an_annotated_reference_states_what_it_may_not_control(self) -> None:
+        spec = asset_spec(
+            reference_bindings=[
+                {
+                    "slot_id": "REF-1",
+                    "order": 1,
+                    "role": "identity",
+                    "may_control": "角色设计",
+                    "must_not_control": "构图",
+                    "inspection": "unverified",
+                }
+            ]
+        )
+        text = self.render([spec])
+        self.assertIn("不得导入 `构图`", text)
+        self.assertIn("检查状态 `unverified`", text)
+
+    def test_asset_and_lookdev_specs_cannot_share_one_document(self) -> None:
+        # Their metadata answers different questions.
+        with self.assertRaises(image_renderer.RenderError):
+            self.render([asset_spec(), asset_spec(spec_id="L-1", lookdev_axis="x")])
+
+    def test_a_duplicate_spec_id_is_refused(self) -> None:
+        with self.assertRaises(image_renderer.RenderError):
+            self.render([asset_spec(), asset_spec()])

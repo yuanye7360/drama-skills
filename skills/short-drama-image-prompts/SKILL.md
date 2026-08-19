@@ -121,6 +121,24 @@ license: MIT
 
 跨文件发布遵循主技能的提交与恢复流程；不得以半成品覆盖已接受版本。
 
+## 渲染派生文本
+
+`image-prompts.md` 与 `lookdev-prompts.md` 的资产模板是文档契约，**渲染交给
+[render_image_prompts.py](scripts/render_image_prompts.py)，不要手写**：
+
+```bash
+python3 <skill-dir>/scripts/render_image_prompts.py 剧集/EP001/assets/image-prompt-specs.jsonl \
+  --project short-drama.json --assets 设定集/characters.jsonl 设定集/locations.jsonl 设定集/props.jsonl \
+  --out 剧集/EP001/assets/image-prompts.md
+```
+
+正文取自规格的 `generic_prompt`，逐字透传。脚本只管文档形状：按记录里有没有 `lookdev_axis`
+自动分辨两种规格并拒绝混在同一份文档、`intent` 渲成散文而不是原样打印映射、标题优先用资产
+显示名、没有变体记录就不出「变体/编辑说明」空块、参考图绑定缺 `role`/`may_control`/
+`must_not_control` 直接拒渲。
+
+**改正文要改规格记录再重渲**，只改 Markdown 会让权威记录与派生文本分家。
+
 ## 自然语言修订
 
 用户可直接说“外套保持不变，只把袖口变湿”“场景里不要出现演员”。不要让用户编辑 JSONL。
