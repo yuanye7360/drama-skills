@@ -190,6 +190,22 @@ python3 <skill-dir>/scripts/motion_timing_check.py \
   记录容器成员顺序、各成员已接受时长的只读引用与容器时长，模板见
   [delivery-container.jsonl.md](assets/delivery-container.jsonl.md)；
 - `剧集/<EP>/storyboard/video-prompts.md`：由已接受规格、容器记录和配方 `hash` 生成的文本版本。
+  容器一节**交给 [render_container_prompts.py](scripts/render_container_prompts.py) 渲染，不要手写**：
+
+```bash
+python3 <skill-dir>/scripts/render_container_prompts.py 剧集/EP001/storyboard/delivery-containers.jsonl \
+  --shots 剧集/EP001/storyboard/shots.jsonl \
+  --motion-specs 剧集/EP001/storyboard/motion-specs.jsonl \
+  --sheets 剧集/EP001/storyboard/storyboard-sheets.jsonl \
+  --style-lock <项目风格锁文件> --project short-drama.json
+```
+
+  脚本算分段偏移、逐字透传成员的运动正文，并**按 `VID-21` 复核接缝**：从成员镜头的主体与
+  地点重新判定 `match_cut` / `hard_cut`，记录声称匹配切却跨了主体或地点时拒绝渲染。它还挡住
+  容器时长与成员之和不符、一个镜头被两个容器认领、成员 `order` 不连续。
+
+  正文语言取自记录里的 `generic_prompt`。**改语言要改运动规格记录再重渲**，只改 Markdown
+  会让权威记录与派生文本分家。
 
 自然语言改提示词时，先展示规格字段怎样变化和重新生成的文本预览；若改动触碰分镜或
 剧本负责的内容，保持当前文件不变，并把修改请求交给对应技能。跨文件发布遵循主技能的
