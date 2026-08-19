@@ -136,7 +136,18 @@ license: MIT
 [storyboard-sheet.md](references/storyboard-sheet.md)）：用
 [storyboard-sheet-template.jsonl](assets/storyboard-sheet-template.jsonl) 写结构化来源，发布为
 `剧集/<EP>/storyboard/storyboard-sheets.jsonl`，再用
-[storyboard-sheet-prompts.md](assets/storyboard-sheet-prompts.md) 渲染可复制文本。
+[storyboard-sheet-prompts.md](assets/storyboard-sheet-prompts.md) 作为版式契约，**渲染交给
+[render_sheet_prompts.py](scripts/render_sheet_prompts.py)，不要手写这份派生文本**：
+
+```bash
+python3 <skill-dir>/scripts/render_sheet_prompts.py 剧集/EP001/storyboard/storyboard-sheets.jsonl \
+  --project short-drama.json --out 剧集/EP001/storyboard/storyboard-sheet-prompts.md
+```
+
+脚本负责版式契约里纯机械的部分：围栏而非引用块、占位字段整句省略、标注行只列本格真有的
+箭头、负面清单由机器键译成短句、灰度锚点排在面板之前。它不翻译——记录用创作者语言写成，
+`#/format/prompt_language` 与 `#/language` 不一致时脚本拒绝渲染并说明原因，不会用错误语言
+输出看起来很笃定的正文。
 
 - 每格 `shot_ref` 一对一映一个镜头，格顺序=叙事先后；镜头多于格上限就按 `A/B/C…` 拆多张 sheet。
   一张 sheet 不强求恰好一个场景，边界以连续叙事节拍为准。

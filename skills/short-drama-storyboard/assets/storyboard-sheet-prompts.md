@@ -12,6 +12,10 @@ sheet 是**粗略 previs**（黑白画面 + 彩色标注箭头）：每格接受
 **正文用围栏包住，不用引用块**：sheet 正文有几十行，`>` 引用块复制出来会带 `> ` 前缀，
 所以正文一律放 ```` ```text ```` 围栏里整段复制。
 
+**本文件是版式契约，不是让人照抄的稿纸**：实际渲染跑
+[render_sheet_prompts.py](../scripts/render_sheet_prompts.py)，由它从 `storyboard-sheets.jsonl`
+生成。下面的骨架说明脚本会产出什么形状，改版式先改脚本与其测试，再改这里。
+
 ````markdown
 # EP<编号> · 场次故事板 previs · <组>组
 
