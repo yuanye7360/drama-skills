@@ -88,6 +88,39 @@ def _require(record: dict[str, Any], key: str, where: str) -> Any:
     return value
 
 
+def load_style_lock(path: Path) -> str:
+    """Read the one verbatim style lock every prompt body must open with.
+
+    "Reused verbatim across the project" only holds while the text has a place
+    to be read from. A loose string retyped per render is the same rule with
+    nothing enforcing it.
+    """
+
+    records = _load_jsonl(path)
+    if len(records) != 1:
+        raise RenderError(
+            f"{path}: a project has exactly one style lock, found {len(records)}"
+        )
+    text = str(records[0].get("text") or "").strip()
+    if not text:
+        raise RenderError(f"{path}: style lock record carries no text")
+    return text
+
+
+def check_style_lock(body: str, style_lock: str, where: str) -> None:
+    """Refuse a body that does not open with the lock.
+
+    A body missing it reaches the generator with no look direction at all, and
+    the result is stylistically unrelated to the assets rendered beside it —
+    visible only once the images come back.
+    """
+
+    if not body.strip().startswith(style_lock):
+        raise RenderError(
+            f"{where}: prompt body must open with the project style lock verbatim"
+        )
+
+
 def _visibility_lines(shot: dict[str, Any]) -> list[str]:
     lines = []
     for item in shot.get("audience_visibility") or []:
@@ -127,7 +160,7 @@ def _binding_summary(keyframe: dict[str, Any], shot: dict[str, Any]) -> str:
 
 
 def render_keyframe(
-    keyframe: dict[str, Any], shots: dict[str, dict[str, Any]]
+    keyframe: dict[str, Any], shots: dict[str, dict[str, Any]], style_lock: str
 ) -> list[str]:
     kid = _require(keyframe, "keyframe_id", "<keyframe>")
     where = f"keyframe {kid}"
@@ -180,6 +213,7 @@ def render_keyframe(
     # `exclusions` already reach the generator inside `generic_prompt`; repeating
     # them as metadata doubles the text without adding a fact.
     body = _require(keyframe, "generic_prompt", where)
+    check_style_lock(str(body), style_lock, where)
     if "\n" in str(body).strip():
         # A keyframe freezes one instant. A body that needs paragraphs is a
         # motion description wearing a keyframe's name.
@@ -195,6 +229,7 @@ def render(
     episode_id: str,
     prompt_language: str,
     note: str | None,
+    style_lock: str,
 ) -> str:
     seen: set[tuple[str, str]] = set()
     out = [
@@ -218,7 +253,7 @@ def render(
                 "two keyframes freeze %s at the %s boundary" % (key[0], key[1])
             )
         seen.add(key)
-        out += render_keyframe(keyframe, shots)
+        out += render_keyframe(keyframe, shots, style_lock)
     return "\n".join(out)
 
 
@@ -229,6 +264,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("keyframes", type=Path, help="keyframes.jsonl")
     parser.add_argument("--shots", type=Path, required=True, help="shots.jsonl")
     parser.add_argument("--project", type=Path, required=True, help="short-drama.json")
+    parser.add_argument(
+        "--style-lock", type=Path, required=True,
+        help="项目开发/style-lock.jsonl",
+    )
     parser.add_argument("--episode-id", default=None)
     parser.add_argument("--out", type=Path, default=None, help="default: stdout")
     parser.add_argument("--note", default=None)
@@ -264,6 +303,7 @@ def main(argv: list[str] | None = None) -> int:
             episode_id=episode_id,
             prompt_language=prompt_language,
             note=args.note,
+            style_lock=load_style_lock(args.style_lock),
         )
     except RenderError as error:
         print(str(error), file=sys.stderr)

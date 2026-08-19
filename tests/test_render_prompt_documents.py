@@ -60,7 +60,8 @@ def keyframe(shot_id: str, **overrides: Any) -> dict:
 class KeyframeRendererTests(unittest.TestCase):
     def render(self, keyframes: list[dict], shots: dict[str, dict]) -> str:
         return keyframe_renderer.render(
-            keyframes, shots, episode_id="EP001", prompt_language="zh", note=None
+            keyframes, shots, episode_id="EP001", prompt_language="zh", note=None,
+            style_lock="",
         )
 
     def test_place_comes_from_the_shot_not_the_keyframe(self) -> None:
@@ -323,6 +324,7 @@ class ImagePromptRendererTests(unittest.TestCase):
             source="image-prompt-specs.jsonl",
             prompt_language="zh",
             note=None,
+            style_lock="",
             names=names,
         )
 
@@ -387,5 +389,50 @@ class KeyframeShotLookupTests(unittest.TestCase):
         with self.assertRaises(keyframe_renderer.RenderError):
             keyframe_renderer.render(
                 [keyframe("SHOT-1")], {}, episode_id="EP001",
-                prompt_language="zh", note=None,
+                prompt_language="zh", note=None, style_lock="",
             )
+
+
+class StyleLockTests(unittest.TestCase):
+    LOCK = "二维有限动画画风：手绘线条。"
+
+    def test_a_body_missing_the_lock_is_refused(self) -> None:
+        # 29 keyframe bodies shipped without it once: the generator then gets no
+        # look direction at all and returns frames unrelated to the asset sheets
+        # rendered beside them — visible only after the images come back.
+        with self.assertRaises(keyframe_renderer.RenderError):
+            keyframe_renderer.render(
+                [keyframe("SHOT-1", generic_prompt="教室内景全景。")],
+                {"SHOT-1": shot("SHOT-1", chars=[], location="L")},
+                episode_id="EP001", prompt_language="zh", note=None,
+                style_lock=self.LOCK,
+            )
+
+    def test_a_body_opening_with_the_lock_renders(self) -> None:
+        text = keyframe_renderer.render(
+            [keyframe("SHOT-1", generic_prompt=self.LOCK + "教室内景全景。")],
+            {"SHOT-1": shot("SHOT-1", chars=[], location="L")},
+            episode_id="EP001", prompt_language="zh", note=None,
+            style_lock=self.LOCK,
+        )
+        self.assertIn(self.LOCK, text)
+
+    def test_the_lock_must_match_verbatim_not_merely_resemble(self) -> None:
+        # "Reused verbatim" is the whole point; a reworded lock per stage is how
+        # a project ends up with four nearly-identical looks.
+        with self.assertRaises(image_renderer.RenderError):
+            image_renderer.render(
+                [asset_spec(generic_prompt="二维有限动画风格：手绘线条。角色设定板。")],
+                title="t", source="s", prompt_language="zh", note=None,
+                style_lock=self.LOCK,
+            )
+
+    def test_a_project_has_exactly_one_style_lock(self) -> None:
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "style-lock.jsonl"
+            path.write_text(
+                '{"text":"a"}\n{"text":"b"}\n', encoding="utf-8"
+            )
+            with self.assertRaises(keyframe_renderer.RenderError):
+                keyframe_renderer.load_style_lock(path)

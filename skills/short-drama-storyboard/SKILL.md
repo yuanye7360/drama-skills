@@ -172,6 +172,7 @@ sheet，直接进关键帧；密集调度或动作戏建议先出 sheet 再逐�
 ```bash
 python3 <skill-dir>/scripts/render_keyframe_prompts.py 剧集/EP001/storyboard/keyframes.jsonl \
   --shots 剧集/EP001/storyboard/shots.jsonl --project short-drama.json \
+  --style-lock 项目开发/style-lock.jsonl \
   --out 剧集/EP001/storyboard/keyframe-prompts.md
 ```
 

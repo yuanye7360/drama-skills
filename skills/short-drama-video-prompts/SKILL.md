@@ -197,7 +197,7 @@ python3 <skill-dir>/scripts/render_container_prompts.py 剧集/EP001/storyboard/
   --shots 剧集/EP001/storyboard/shots.jsonl \
   --motion-specs 剧集/EP001/storyboard/motion-specs.jsonl \
   --sheets 剧集/EP001/storyboard/storyboard-sheets.jsonl \
-  --style-lock <项目风格锁文件> --project short-drama.json
+  --style-lock 项目开发/style-lock.jsonl --project short-drama.json
 ```
 
   脚本算分段偏移、逐字透传成员的运动正文，并**按 `VID-21` 复核接缝**：从成员镜头的主体与

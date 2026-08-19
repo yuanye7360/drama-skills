@@ -318,7 +318,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--sheets", type=Path, required=True,
                         help="storyboard-sheets.jsonl")
     parser.add_argument("--style-lock", type=Path, required=True,
-                        help="file holding the project style lock, reused verbatim")
+                        help="项目开发/style-lock.jsonl")
     parser.add_argument("--project", type=Path, required=True)
     parser.add_argument("--out", type=Path, default=None, help="default: stdout")
     return parser
@@ -346,12 +346,15 @@ def main(argv: list[str] | None = None) -> int:
         sheets = {
             r.get("sheet_id", ""): r for r in _load_jsonl(args.sheets)
         }
-        try:
-            style_lock = args.style_lock.read_text(encoding="utf-8").strip()
-        except (OSError, UnicodeError) as error:
-            raise RenderError(f"unreadable style lock: {args.style_lock}") from error
+        style_records = _load_jsonl(args.style_lock)
+        if len(style_records) != 1:
+            raise RenderError(
+                "%s: a project has exactly one style lock, found %d"
+                % (args.style_lock, len(style_records))
+            )
+        style_lock = str(style_records[0].get("text") or "").strip()
         if not style_lock:
-            raise RenderError("style lock file is empty")
+            raise RenderError("style lock record carries no text")
         text = render(
             containers, shots, motions, sheets,
             style_lock=style_lock, prompt_language=prompt_language,

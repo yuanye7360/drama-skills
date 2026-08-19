@@ -84,11 +84,45 @@ def _require(record: dict[str, Any], key: str, where: str) -> Any:
     return value
 
 
-def _body(spec: dict[str, Any], where: str) -> list[str]:
+def _body(spec: dict[str, Any], where: str, style_lock: str) -> list[str]:
     body = str(_require(spec, "generic_prompt", where)).strip()
     if not body:
         raise RenderError(f"{where}: empty generic_prompt")
+    check_style_lock(body, style_lock, where)
     return ["", "### 可复制通用提示词", "", "> " + body, "", "---", ""]
+
+
+def load_style_lock(path: Path) -> str:
+    """Read the one verbatim style lock every prompt body must open with.
+
+    "Reused verbatim across the project" only holds while the text has a place
+    to be read from. A loose string retyped per render is the same rule with
+    nothing enforcing it.
+    """
+
+    records = _load_jsonl(path)
+    if len(records) != 1:
+        raise RenderError(
+            f"{path}: a project has exactly one style lock, found {len(records)}"
+        )
+    text = str(records[0].get("text") or "").strip()
+    if not text:
+        raise RenderError(f"{path}: style lock record carries no text")
+    return text
+
+
+def check_style_lock(body: str, style_lock: str, where: str) -> None:
+    """Refuse a body that does not open with the lock.
+
+    A body missing it reaches the generator with no look direction at all, and
+    the result is stylistically unrelated to the assets rendered beside it —
+    visible only once the images come back.
+    """
+
+    if not body.strip().startswith(style_lock):
+        raise RenderError(
+            f"{where}: prompt body must open with the project style lock verbatim"
+        )
 
 
 def _reference_line(spec: dict[str, Any]) -> str:
@@ -138,7 +172,9 @@ def _intent_text(intent: Any) -> str:
     return "；".join(parts)
 
 
-def render_asset_spec(spec: dict[str, Any], names: dict[str, str]) -> list[str]:
+def render_asset_spec(
+    spec: dict[str, Any], names: dict[str, str], style_lock: str
+) -> list[str]:
     sid = _require(spec, "spec_id", "<spec>")
     where = f"spec {sid}"
     binding = _require(spec, "asset_binding", where)
@@ -171,7 +207,7 @@ def render_asset_spec(spec: dict[str, Any], names: dict[str, str]) -> list[str]:
     if notes:
         out.append("- **注意**：%s" % "；".join(str(n) for n in notes))
 
-    out += _body(spec, where)
+    out += _body(spec, where, style_lock)
 
     # Variant notes belong only to a spec that records one. Each delta names the
     # field it moves, the change an eye can check, and how long it holds; a
@@ -195,7 +231,7 @@ def render_asset_spec(spec: dict[str, Any], names: dict[str, str]) -> list[str]:
     return out
 
 
-def render_lookdev_spec(spec: dict[str, Any]) -> list[str]:
+def render_lookdev_spec(spec: dict[str, Any], style_lock: str) -> list[str]:
     sid = _require(spec, "spec_id", "<spec>")
     where = f"spec {sid}"
     axis = _require(spec, "lookdev_axis", where)
@@ -230,13 +266,13 @@ def render_lookdev_spec(spec: dict[str, Any]) -> list[str]:
     out.append(_reference_line(spec).replace("参考图用途", "风格参考权限"))
     if _meaningful(spec.get("unknowns")):
         out.append("- **仍未知**：%s" % spec["unknowns"])
-    out += _body(spec, where)
+    out += _body(spec, where, style_lock)
     return out
 
 
 def render(
     specs: list[dict[str, Any]], *, title: str, source: str, prompt_language: str,
-    note: str | None, names: dict[str, str] | None = None,
+    note: str | None, style_lock: str, names: dict[str, str] | None = None,
 ) -> str:
     kinds = {"lookdev" if s.get("lookdev_axis") else "asset" for s in specs}
     if len(kinds) > 1:
@@ -264,9 +300,9 @@ def render(
             raise RenderError(f"duplicate spec_id {sid!r}")
         seen.add(sid)
         out += (
-            render_lookdev_spec(spec)
+            render_lookdev_spec(spec, style_lock)
             if lookdev
-            else render_asset_spec(spec, names or {})
+            else render_asset_spec(spec, names or {}, style_lock)
         )
     return "\n".join(out)
 
@@ -281,6 +317,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="asset JSONL files supplying display names (设定集/*.jsonl)",
     )
     parser.add_argument("--project", type=Path, required=True)
+    parser.add_argument(
+        "--style-lock", type=Path, required=True,
+        help="项目开发/style-lock.jsonl",
+    )
     parser.add_argument("--title", default=None)
     parser.add_argument("--out", type=Path, default=None, help="default: stdout")
     parser.add_argument("--note", default=None)
@@ -315,6 +355,7 @@ def main(argv: list[str] | None = None) -> int:
             source=args.specs.name,
             prompt_language=prompt_language,
             note=args.note,
+            style_lock=load_style_lock(args.style_lock),
             names=names,
         )
     except RenderError as error:

@@ -128,7 +128,8 @@ license: MIT
 
 ```bash
 python3 <skill-dir>/scripts/render_image_prompts.py 剧集/EP001/assets/image-prompt-specs.jsonl \
-  --project short-drama.json --assets 设定集/characters.jsonl 设定集/locations.jsonl 设定集/props.jsonl \
+  --project short-drama.json --style-lock 项目开发/style-lock.jsonl \
+  --assets 设定集/characters.jsonl 设定集/locations.jsonl 设定集/props.jsonl \
   --out 剧集/EP001/assets/image-prompts.md
 ```
 
@@ -136,6 +137,11 @@ python3 <skill-dir>/scripts/render_image_prompts.py 剧集/EP001/assets/image-pr
 自动分辨两种规格并拒绝混在同一份文档、`intent` 渲成散文而不是原样打印映射、标题优先用资产
 显示名、没有变体记录就不出「变体/编辑说明」空块、参考图绑定缺 `role`/`may_control`/
 `must_not_control` 直接拒渲。
+
+脚本还核对**每条正文起首逐字带着项目风格锁**（`项目开发/style-lock.jsonl`，模板见
+[style-lock.jsonl.md](assets/style-lock.jsonl.md)）。缺锁的正文送到生成器等于没有画风指示，
+产出会和旁边的资产图完全不是一套——这件事只有等图渲出来才看得见，所以在渲染就挡住。
+风格锁只有一条记录，改画风改那一条并重投影，不要在各条提示词里各改各的。
 
 **改正文要改规格记录再重渲**，只改 Markdown 会让权威记录与派生文本分家。
 
