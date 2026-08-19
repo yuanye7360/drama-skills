@@ -150,7 +150,11 @@ def render_keyframe(
     out = [f"## `{shot_id}` · `{kid}`", ""]
     out.append("- **镜头目的**：%s" % _require(keyframe, "purpose", where))
 
-    shot = shots.get(shot_id, {})
+    # A missing shot silently costs the prompt its place and its visibility
+    # lines, and the document still looks finished. Refuse instead.
+    if shot_id not in shots:
+        raise RenderError(f"{where}: shot {shot_id} is not in the shot list")
+    shot = shots[shot_id]
     visibility = _visibility_lines(shot)
     if visibility:
         out.append("- **观众可见性**：" + "；".join(visibility))

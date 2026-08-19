@@ -210,18 +210,25 @@ def render_sheet(sheet: dict[str, Any], aspect_ratio: str) -> list[str]:
     if len(titles) != 2:
         raise RenderError(f"{where}: header needs exactly two quoted title lines")
     empty = "、".join(grid.get("empty_cells") or []) or "无"
+    # The paper and a panel are two different ratios: a 4×2 grid of 9:16 panels
+    # is not a 9:16 sheet, and the header band takes space no derivation knows
+    # about. So the panel ratio comes from the record, and the paper ratio is
+    # only stated when the creator has chosen one.
+    panel_aspect = grid.get("panel_aspect") or aspect_ratio
+    sheet_aspect = grid.get("sheet_aspect")
+    paper = ("%s " % sheet_aspect) if sheet_aspect else ""
     out.append(
-        "%s 竖屏故事板纸张，%d列×%d行 网格共 %d 个电影风格面板，左→右、上→下依次填满，"
-        "空格位 %s 留空。每格严格同一取景比例 %s、尺寸统一，无混合比例。格标题固定写 "
+        "%s故事板纸张，%d列×%d行 网格共 %d 个电影风格面板，左→右、上→下依次填满，"
+        "空格位 %s 留空。每格取景比例 %s。格标题固定写 "
         "`SHOT-<id> / 景别 / 动作节点名`。页眉排版适配画风，含细分割线与清晰层级，"
         "图形元素置于分镜格之外，只放这两行引号标题：“%s” “%s”，不添加其他页眉文本。"
         % (
-            aspect_ratio,
+            paper,
             _require(grid, "cols", where),
             _require(grid, "rows", where),
             _require(grid, "filled", where),
             empty,
-            aspect_ratio,
+            panel_aspect,
             titles[0],
             titles[1],
         )

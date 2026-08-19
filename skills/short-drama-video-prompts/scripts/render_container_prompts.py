@@ -258,6 +258,15 @@ def render_container(
         )
         out.append("")
         offset += duration
+
+    # The exclusions are not decoration. Without them a generator will happily
+    # burn in subtitles, a watermark or a studio logo, and none of that is
+    # visible in the record — so the line is emitted for every container rather
+    # than left to whoever assembles the document.
+    out.append(
+        "无文字，无字幕，无 UI，无标志，无水印。不要以平静站姿、准备姿势或缓慢引入开始。"
+        "不要出现上述参考绑定之外的角色。"
+    )
     out += ["```", "", "---", ""]
     return out
 

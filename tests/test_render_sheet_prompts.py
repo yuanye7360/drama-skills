@@ -136,6 +136,21 @@ class RenderShapeTests(unittest.TestCase):
         with self.assertRaises(render_sheet_prompts.RenderError):
             self.render(record)
 
+    def test_the_panel_ratio_comes_from_the_grid_not_the_delivery_ratio(self) -> None:
+        # A 4x2 grid of 9:16 panels is not a 9:16 sheet, and the header band
+        # takes space no derivation knows about, so the paper ratio is stated
+        # only when the creator chose one.
+        record = sheet()
+        record["grid"]["panel_aspect"] = "9:16，单格取景统一"
+        text = self.render(record)
+        self.assertIn("每格取景比例 9:16，单格取景统一", text)
+        self.assertNotIn("9:16 故事板纸张", text)
+
+    def test_a_chosen_paper_ratio_is_stated(self) -> None:
+        record = sheet()
+        record["grid"]["sheet_aspect"] = "4:3"
+        self.assertIn("4:3 故事板纸张", self.render(record))
+
     def test_rendering_is_deterministic(self) -> None:
         self.assertEqual(self.render(sheet()), self.render(sheet()))
 

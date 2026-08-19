@@ -257,6 +257,22 @@ class ContainerRendererTests(unittest.TestCase):
         )
         self.assertEqual(container_renderer.classify_seam(same, other_place), "hard_cut")
 
+    def test_every_container_carries_the_exclusions(self) -> None:
+        # Dropping this line is invisible in the record and in the document's
+        # shape, and a generator with no exclusions will burn in subtitles, a
+        # watermark or a logo. It shipped once already.
+        text = self.render(
+            [
+                container(
+                    "CONT-1",
+                    [member(1, "SHOT-EP001-SC001-01", 2.0)],
+                    {"kind": "episode_end"},
+                )
+            ]
+        )
+        self.assertIn("无字幕", text)
+        self.assertIn("无水印", text)
+
     def test_references_cover_only_the_panels_this_container_holds(self) -> None:
         text = self.render(
             [
@@ -362,3 +378,14 @@ class ImagePromptRendererTests(unittest.TestCase):
     def test_a_duplicate_spec_id_is_refused(self) -> None:
         with self.assertRaises(image_renderer.RenderError):
             self.render([asset_spec(), asset_spec()])
+
+
+class KeyframeShotLookupTests(unittest.TestCase):
+    def test_a_keyframe_whose_shot_is_missing_is_refused(self) -> None:
+        # Falling back to an empty shot costs the prompt its place and its
+        # visibility lines while the document still looks finished.
+        with self.assertRaises(keyframe_renderer.RenderError):
+            keyframe_renderer.render(
+                [keyframe("SHOT-1")], {}, episode_id="EP001",
+                prompt_language="zh", note=None,
+            )
