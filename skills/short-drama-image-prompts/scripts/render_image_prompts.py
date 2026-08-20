@@ -470,12 +470,12 @@ def main(argv: list[str] | None = None) -> int:
                 if record_id and record.get("display_name"):
                     names[str(record_id)] = str(record["display_name"])
         lookdev = bool(specs[0].get("lookdev_axis"))
+        # The fallback is spelled at the call site rather than passed in, so the
+        # resolved title is a `str` instead of an `Optional[str]` that only
+        # happens never to be None.
         title = resolve_header_value(
-            flag=args.title,
-            document=document,
-            key="title",
-            fallback="项目 Look Development 提示词" if lookdev else "资产图片提示词",
-        )
+            flag=args.title, document=document, key="title", fallback=None
+        ) or ("项目 Look Development 提示词" if lookdev else "资产图片提示词")
         title_explicit = args.title is not None or bool(document.get("title"))
         text = render(
             specs,

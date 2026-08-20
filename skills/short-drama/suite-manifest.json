@@ -66,7 +66,7 @@
     "short-drama-image-prompts/references/prop-plate.md": "f50c1150b6c9d8b3f7003f580834e042edd64d6a0d05a560dac2248a8b5f01ce",
     "short-drama-image-prompts/references/review-and-fixtures.md": "115f8c81c14921e722b6cfb4ee8c616275289c515d0d95013f902ca28b84ae99",
     "short-drama-image-prompts/references/stage-contract.md": "821ce19d8d92d42d47a785ba8fd14789152f6fefc4173585c5087c6b522e32de",
-    "short-drama-image-prompts/scripts/render_image_prompts.py": "d721034dec6e0a8608e4336a2a29fa77c727a1d94ae614f699a6851651dcb372",
+    "short-drama-image-prompts/scripts/render_image_prompts.py": "72bc422dfa2b884f738218a2b5f65da176d4cf211e5939b0a83d05a16106177b",
     "short-drama-novel-analyze/SKILL.md": "1d68397f89e1f23c9d63355c4790f26d1cb31934c840d11bd9db86787845db7d",
     "short-drama-novel-analyze/agents/openai.yaml": "9dbae200bdc6f07ff8e186a5420584394f8dd4e59f9f39a389d38958c3a9939a",
     "short-drama-novel-analyze/assets/episode-candidate.example.jsonl": "ff257557966291ca079d58186de298096e1ece8586cecc8816028596b4fd0604",

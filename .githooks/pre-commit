@@ -1,0 +1,30 @@
+#!/bin/sh
+# The suite manifest hashes every shipped skill file, so any edit under skills/
+# invalidates it. Forgetting to refresh it turns nine installation-resolution
+# tests red for a reason that has nothing to do with the change being made, and
+# the failure surfaces long after the edit. Refresh it here instead.
+#
+# Enable with: python3 tools/install_hooks.py
+set -e
+
+if ! git diff --cached --name-only --diff-filter=ACMR | grep -q '^skills/'; then
+    exit 0
+fi
+
+python3 tools/update_suite_manifest.py skills/short-drama >/dev/null
+
+# The refresher rewrites the core manifest and every child pin; stage back only
+# the ones it actually changed, so a no-op commit stays a no-op.
+refreshed=''
+for path in skills/short-drama/suite-manifest.json skills/*/suite-ref.json; do
+    if [ -f "$path" ] && ! git diff --quiet -- "$path"; then
+        git add -- "$path"
+        refreshed="$refreshed $path"
+    fi
+done
+
+if [ -n "$refreshed" ]; then
+    printf 'pre-commit: refreshed and staged —%s\n' "$refreshed"
+fi
+
+python3 tools/verify_suite.py skills/short-drama >/dev/null
