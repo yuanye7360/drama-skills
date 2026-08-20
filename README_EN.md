@@ -88,21 +88,33 @@ Use $short-drama to init a vertical 9:16 urban face-slapping short-drama project
 Use $short-drama-write to write EP001: a delivery rider humiliated at a luxury
 hotel turns out to be the group chairman
 
-# 3. Extract assets, write prompts and storyboards
+# 3. Assets, storyboard, video prompts: the spine is these three lines
 Use $short-drama-assets to extract characters/scenes/props from EP001
+Use $short-drama-storyboard to author EP001's shots and keyframes
+Use $short-drama-video-prompts to translate each authored shot into a video prompt
+
+# 3a. A branch parallel to the storyboard; it does not wait for the shots
+Use $short-drama-image-prompts to write reference prompts for accepted assets
+
+# 3b. Optional; do not send the line you do not need
 When the visual language needs alignment, use $short-drama for Look Development,
 then $short-drama-image-prompts for character/location/high-pressure style-frame prompts
-Use $short-drama-image-prompts to write reference prompts for accepted assets
-Use $short-drama-storyboard to audition distinct directing approaches for key scenes,
-accept a scene visual plan, then author the shots
-Use $short-drama-storyboard for a previs storyboard sheet of EP001 SC001 (worth it for
-dense blocking or action; skip it for simple scenes)
-Use $short-drama-storyboard to project each panel into a keyframe first frame
-Use $short-drama-video-prompts to translate each authored shot into a video prompt
+Use $short-drama-storyboard to audition distinct directing approaches for EP001's key
+scenes and accept a scene visual plan
+Use $short-drama-storyboard for a previs storyboard sheet of EP001 SC001 (between the
+shots and the keyframes; worth it for dense blocking or action, skipped for simple
+scenes that go straight to keyframes)
 
 # 4. Independent review
 Use $short-drama-review to review EP001's script and prompts
 ```
+
+Only three lines of step 3 are required. Reference prompts and the storyboard are
+**sibling branches** after asset acceptance — the storyboard never waits for reference
+prompts, and reference prompts never wait for shots; Look Development and the previs
+sheet are branches you simply do not invoke when you do not need them. The full
+checkpoint map is in
+[the creator workflow](skills/short-drama/references/creator-workflow.md#checkpoints-and-branches).
 
 See [demo/](demo/) for one episode's full excerpt chain: script → asset sheets →
 storyboard → video prompts.
