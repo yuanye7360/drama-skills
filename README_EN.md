@@ -94,7 +94,10 @@ When the visual language needs alignment, use $short-drama for Look Development,
 then $short-drama-image-prompts for character/location/high-pressure style-frame prompts
 Use $short-drama-image-prompts to write reference prompts for accepted assets
 Use $short-drama-storyboard to audition distinct directing approaches for key scenes,
-accept a scene visual plan, then author the formal storyboard
+accept a scene visual plan, then author the shots
+Use $short-drama-storyboard for a previs storyboard sheet of EP001 SC001 (worth it for
+dense blocking or action; skip it for simple scenes)
+Use $short-drama-storyboard to project each panel into a keyframe first frame
 Use $short-drama-video-prompts to translate each authored shot into a video prompt
 
 # 4. Independent review
@@ -116,7 +119,9 @@ flowchart LR
     write["Episode script<br/>$short-drama-write"]:::phase
     assets["Asset decisions<br/>$short-drama-assets"]:::phase
     img["Image prompts<br/>$short-drama-image-prompts"]:::phase
-    sb["Storyboard/keyframes<br/>$short-drama-storyboard"]:::phase
+    sb["Shots<br/>$short-drama-storyboard"]:::phase
+    sheet["Previs sheet<br/>$short-drama-storyboard"]:::phase
+    kf["Keyframes<br/>$short-drama-storyboard"]:::phase
     vid["Video prompts<br/>$short-drama-video-prompts"]:::phase
     rev["Independent review<br/>$short-drama-review"]:::final
     pkg["Text delivery package"]:::final
@@ -124,7 +129,9 @@ flowchart LR
     nva -.with a source.-> dev
     dev -.optional.-> write --> assets
     assets --> img
-    assets --> sb --> vid
+    assets --> sb
+    sb -.dense blocking.-> sheet --> kf
+    sb --> kf --> vid
     img --> rev
     vid --> rev --> pkg
 ```
@@ -137,7 +144,7 @@ flowchart LR
 | `short-drama-write` | Episode contract, causal beats, performable screenplay, and the project's accepted production dialect |
 | `short-drama-assets` | Character/Look, Location/View, Prop/State, optional voice direction, continuity decisions |
 | `short-drama-image-prompts` | Lookdev style frames, reusable character/location/prop reference prompts, and scoped edits |
-| `short-drama-storyboard` | Optional scene visual plans and Coverage Auditions, source coverage, shots, boundaries, and frozen keyframes |
+| `short-drama-storyboard` | Optional scene visual plans and Coverage Auditions, source coverage, shots, boundaries, an optional previs storyboard sheet, and frozen keyframes |
 | `short-drama-video-prompts` | Ordered action, multi-actor performance and attention handoffs, camera/audio intent, timing, and exact boundaries |
 | `short-drama-review` | Structural/content review, project-bounded diagnosis from authorized production observations, and independent verdicts |
 
