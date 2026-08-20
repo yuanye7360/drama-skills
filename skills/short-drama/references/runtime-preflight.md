@@ -2,6 +2,20 @@
 
 无论从主技能还是子技能进入，都先完成同一套轻量预检。它只检查安装完整性、项目事务状态和已记录的精确引用，不评价创作内容。
 
+## 0. 一条命令走完第 1–2 步
+
+```bash
+python3 <core>/scripts/project_tool.py enter <project>
+```
+
+按固定顺序验证安装、恢复事务、读状态，一次返回 `install` / `recovery` / `status` /
+`next_action`。顺序本身就是纪律：状态若在恢复之前读取，描述的可能是一个写到一半的项目。
+`next_action` 为 `fix_installation` 时安装不可信，**不会**继续跑会写创作者文件的恢复；
+为 `resolve_blocked_transactions` 时先处理冲突，不要因为 `status` 其余部分看起来正常就往下走。
+
+项目路径可用位置参数，也可用 `--project`——与各阶段渲染脚本同一种拼法，两者指向不同项目时
+报错而不是静默挑一个。下面第 1–2 步的单独命令保留，用于分步排查。
+
 ## 1. 验证当前安装
 
 从 `suite-ref.json` 解析到逻辑安装路径中的 core 后，用当前可用的 Python 3 解释器运行：
