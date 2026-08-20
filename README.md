@@ -77,16 +77,26 @@ done
 # 2. 写第一集
 用 $short-drama-write 写第 1 集：外卖员在高档餐厅被经理羞辱，亮出集团董事身份
 
-# 3. 拆资产，写提示词与分镜
+# 3. 拆资产、分镜、视频提示词：主干就这三句
 用 $short-drama-assets 从第 1 集拆人物/场景/道具
-需要统一视觉语言时，用 $short-drama 做 Look Development，再由 $short-drama-image-prompts 写人物/地点/高压力风格帧提示词
-用 $short-drama-image-prompts 为已接受的资产写参考图提示词
-用 $short-drama-storyboard 给关键场次比较导演方案、接受场次视觉计划，再做正式分镜
+用 $short-drama-storyboard 给第 1 集拆镜头和关键帧
 用 $short-drama-video-prompts 把分镜逐镜翻译成视频提示词
+
+# 3a. 与分镜平行的分支，不必等镜头拆完
+用 $short-drama-image-prompts 为已接受的资产写参考图提示词
+
+# 3b. 可选，不需要就别发
+用 $short-drama 做 Look Development，再由 $short-drama-image-prompts 写人物/地点/高压力风格帧提示词
+用 $short-drama-storyboard 给第 1 集的关键场次比较导演方案、接受场次视觉计划
+用 $short-drama-storyboard 给第 1 集第 1 场出场次故事板 previs sheet（在镜头与关键帧之间；密集调度或动作戏才值得，简单场次直接进关键帧）
 
 # 4. 独立审查
 用 $short-drama-review 审查第 1 集的剧本与提示词
 ```
+
+第 3 步只有三句是必经的。参考图提示词与分镜是资产接受之后的**平行兄弟**——分镜不等参考图，
+参考图也不等镜头；Look Development 与故事板 previs 是分支，不需要时不发那一句。检查点全图见
+[创作者流程](skills/short-drama/references/creator-workflow.md#checkpoints-and-branches)。
 
 一集完整的摘录链条见 [demo/](demo/)：剧本 → 资产设定 → 分镜 → 视频提示词。
 
@@ -102,7 +112,9 @@ flowchart LR
     write["分集剧本<br/>$short-drama-write"]:::phase
     assets["资产决策<br/>$short-drama-assets"]:::phase
     img["图片提示词<br/>$short-drama-image-prompts"]:::phase
-    sb["分镜/关键帧<br/>$short-drama-storyboard"]:::phase
+    sb["镜头<br/>$short-drama-storyboard"]:::phase
+    sheet["故事板 previs<br/>$short-drama-storyboard"]:::phase
+    kf["关键帧<br/>$short-drama-storyboard"]:::phase
     vid["视频提示词<br/>$short-drama-video-prompts"]:::phase
     rev["独立审查<br/>$short-drama-review"]:::final
     pkg["文本交付包"]:::final
@@ -110,7 +122,9 @@ flowchart LR
     nva -.有原著时.-> dev
     dev -.可选.-> write --> assets
     assets --> img
-    assets --> sb --> vid
+    assets --> sb
+    sb -.密集调度时.-> sheet --> kf
+    sb --> kf --> vid
     img --> rev
     vid --> rev --> pkg
 ```
@@ -123,7 +137,7 @@ flowchart LR
 | `short-drama-write` | 单集目标、因果节拍、可拍剧本和项目选择的制作稿格式 |
 | `short-drama-assets` | 人物/造型、地点/视图、道具/状态、可选的角色声音方向与连续性决策 |
 | `short-drama-image-prompts` | Lookdev 风格帧、角色/场景/道具参考板提示词与定点修改说明 |
-| `short-drama-storyboard` | 可选场次视觉计划与 Coverage Audition、原文落实、镜头、边界和冻结关键帧 |
+| `short-drama-storyboard` | 可选场次视觉计划与 Coverage Audition、原文落实、镜头、边界、可选故事板 previs sheet 和冻结关键帧 |
 | `short-drama-video-prompts` | 单镜动作、多人物表演与注意交接、摄影、声音、起止状态与补拍说明 |
 | `short-drama-review` | 结构/内容审查、授权生产观察的项目级校准诊断与独立结论 |
 

@@ -16,19 +16,25 @@
 进入本阶段前先完成这套轻量预检。它只检查安装完整性、项目事务状态和已记录的精确引用，
 不评价创作内容。
 
-1. **验证安装**：从本技能目录的 `suite-ref.json` 解析到逻辑安装路径中的 core，用当前
+1. **验证安装、恢复事务、读状态：一条 `enter` 全包**。从本技能目录的 `suite-ref.json`
+   解析到逻辑安装路径中的 core，运行
+   `python3 <core>/scripts/project_tool.py enter <project>`。它按固定顺序做完下面两步并
+   一次返回 `install` / `recovery` / `status` / `next_action`；`next_action` 是
+   `fix_installation` 时安装不可信，**不会**去跑会写创作者文件的恢复。项目路径可用位置
+   参数也可用 `--project`，与各阶段渲染脚本同一种拼法。分步排查时下面的单独命令仍然可用。
+2. **验证安装**：从本技能目录的 `suite-ref.json` 解析到逻辑安装路径中的 core，用当前
    环境可用的 Python 3 解释器运行 core 的 `scripts/suite_verify.py`。验证器沿逻辑安装
    路径逐一检查清单中的技能；混装、缺件、额外可执行文件或 hash 不一致时停止写入，
    也不要退回源码检出目录“借用”通过验证的兄弟技能。
-2. **先恢复事务，再读状态**：定位项目根目录后，先运行 core 的 `scripts/project_tool.py`
+3. **先恢复事务，再读状态**：定位项目根目录后，先运行 core 的 `scripts/project_tool.py`
    的 `recover`，再运行 `status`。`recover` 可重复执行；它报告 blocked 时保持创作者文件
    原样并先处理冲突，不要绕过 WAL、手改状态文件或假定上次写入成功。`status` 中的
    accepted/candidate 指针和阻断项是本阶段工作的当前事实。
-3. **只通过公开生命周期写入**：负责人用 `publish` 原子发布候选，并给每个外部结构化引用
+4. **只通过公开生命周期写入**：负责人用 `publish` 原子发布候选，并给每个外部结构化引用
    提供精确 input hash。上游接受引用不继承候选状态。创作者接受、独立审查与内容修订是
    不同动作。每次修订后重新运行适用的结构校验，并让下游刷新旧 hash。打包是最终交付闸门，
    不是接受或审查命令；仍有阻断项时不打包。
-4. **读共享 JSON/JSONL 时同时声明读了哪几条记录**：`设定集/*.jsonl` 与项目文件是全项目
+5. **读共享 JSON/JSONL 时同时声明读了哪几条记录**：`设定集/*.jsonl` 与项目文件是全项目
    共享输入，只按整文件 hash 绑定会让后续任何一次增补把此前引用过它的产物全部标为
    `stale`。发布时对这类输入补 `--input-record <path>=<selector>`（JSONL 用记录 ID，
    JSON 用 RFC 6901 指针，每条一次），此后只有被绑定的记录变化才会影响本产物。
@@ -102,6 +108,7 @@
 | VID-18 | reviewed_invariant | Per-shot text readiness is a scope-aware review/status projection derived from current accepted refs and real blocking gaps, not a persisted motion fact. A missing input blocks only dependent claims; overall delivery-ready requires all applicable scopes. Readiness never claims generated identity, performance, lip-sync, mix, edit, or market quality. |
 | VID-19 | reviewed_invariant | When the creator profile declares required literal tokens for a delivery route, that route's delivery text preserves them byte-for-byte and outside the verbatim-dialogue fence. Paraphrase, translation, reordering, or omission is treated as a defect because a literal-matching surface has no reason to reject the rewritten text—the failure is silent rather than reported. The suite asserts no specific surface's behaviour, and whether a given result took the route is returned adherence, provable only by a bound production observation. Tokens declare a route and never substitute for the start state, action, or endpoint. Absent a declared token list the suite invents none; until the profile exposes a machine-readable list at a pinned field path, the reviewer cites the profile against the delivery text rather than claiming mechanical enforcement. |
 | VID-20 | reviewed_invariant | Packing routes change delivery granularity only, leaving shot boundaries, shot purpose, and per-shot reviewability intact. A single long-form generation carrying several accepted shots *is* a multi-shot container and is billed under VID-13 and VID-15; it introduces no separate accounting and no exemption from the contiguity, binding-chain, and scene-boundary constraints. A continuation route instead starts from a previously generated result, which is observation evidence and not an accepted artifact: the accepted shot start boundary stays the sole authority, and any claim about the observed state binds a production observation record or remains `unverified`. |
+| VID-21 | reviewed_invariant | Adjacent containers join only at a shot boundary, never inside a shot or storyboard panel, and each seam is classified before it is written. A seam is a match cut only when subject and location both carry across it and the action continues along one path; there the previous shot's `end_boundary` and the next shot's `start_boundary` describe one instant, and that accepted keyframe serves as both the tail frame of container N and the first frame of container N+1. A seam where subject or location changes — reverse angles, reaction coverage, a scene cut — is a hard cut carrying no shared frame: container N reaches its own last member's accepted `end_boundary`, container N+1 starts from its own first member's accepted `start_boundary`, and the join is the cut itself. Presenting the next container's first frame as the previous container's tail frame across a hard cut is a defect, because it asks for the incoming subject at the outgoing segment's end; pinning a tail frame there requires an end keyframe requested from storyboarding for that shot. The authority for any seam is always the accepted boundary keyframe, never whatever a previous generation happened to render; continuing from a generated result follows the `generated_result` observation duty and writes no observed state back into shot boundaries. Pinning both ends of a container delegates the panels between them to interpolation, so a panel whose path itself carries the drama keeps its own container or first frame. |
 
 ### `CON`
 

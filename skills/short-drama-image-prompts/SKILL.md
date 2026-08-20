@@ -97,7 +97,7 @@ license: MIT
 
 ### 3. 按重要性写规格与通用提示词
 
-按“用途/主体 → 识别点 → 状态差异 → 构图/方向/尺度/空间关系 → 材质/色彩/光线 → 背景 → 文字政策 → 排除/保留”组织。身份、地理、尺度和可读文字等重要事实先于“精致、电影感”等空泛审美词。
+按“**风格锁（起首）** → 用途/主体 → 识别点 → 状态差异 → 构图/方向/尺度/空间关系 → 材质/色彩/光线 → 背景 → 文字政策 → 排除/保留”组织。每条提示词起首先用已接受制作形态/视觉方向写死风格锁（描述性、不指名 IP，见 [通用配方](references/common-recipe.md) 的「风格锁」）；身份、地理、尺度和可读文字等重要事实先于“精致、电影感”等空泛审美词。
 
 - `structural_invariant`：绑定准确的已接受 ID/版本；局部修改写清 `target/hash/region`、`changes`、`preserve` 和连续性影响；`readable` 不得与全局 `no-text` 并存。
 - `reviewed_invariant`：人物在一个规格中保持同一身份和一套连贯造型；场景保持清楚的地理；道具保持可辨尺度、形制与功能。
@@ -120,6 +120,43 @@ license: MIT
 - `剧集/<EP>/assets/image-prompts.md`：由已接受规格和配方 `hash` 重新生成的文本版本。
 
 跨文件发布遵循主技能的提交与恢复流程；不得以半成品覆盖已接受版本。
+
+## 渲染派生文本
+
+`image-prompts.md` 与 `lookdev-prompts.md` 的资产模板是文档契约，**渲染交给
+[render_image_prompts.py](scripts/render_image_prompts.py)，不要手写**：
+
+```bash
+python3 <skill-dir>/scripts/render_image_prompts.py 剧集/EP001/assets/image-prompt-specs.jsonl \
+  --project short-drama.json --out 剧集/EP001/assets/image-prompts.md
+```
+
+`--style-lock` 与 `--assets` 省略时按 canonical layout 从项目根推导
+（`项目开发/style-lock.jsonl`、`设定集/*.jsonl`）；非 canonical 的项目会被点名要求显式传入，
+而不是拿到一条猜出来的路径。
+
+**文档标题与创作者说明写进规格文件首条 `document` 记录**，不要靠命令行记着：
+
+```json
+{"record_kind": "document", "title": "EP001 · 资产图片提示词", "note": "覆盖 SC001–SC003。"}
+```
+
+`--title` / `--note` 只是一次性覆写。两者都缺时标题回落到不带集号的通用名
+（普通资产 `资产图片提示词`、lookdev `项目 Look Development 提示词`）——所以 `--out` 已存在
+且其页眉带着本次渲染重现不出来的标题或说明时，脚本**拒绝覆写**并指出要补哪条记录，
+不会静默把它删掉。
+
+正文取自规格的 `generic_prompt`，逐字透传。脚本只管文档形状：按记录里有没有 `lookdev_axis`
+自动分辨两种规格并拒绝混在同一份文档、`intent` 渲成散文而不是原样打印映射、标题优先用资产
+显示名、没有变体记录就不出「变体/编辑说明」空块、参考图绑定缺 `role`/`may_control`/
+`must_not_control` 直接拒渲。
+
+脚本还核对**每条正文起首逐字带着项目风格锁**（`项目开发/style-lock.jsonl`，模板见
+[style-lock.jsonl.md](assets/style-lock.jsonl.md)）。缺锁的正文送到生成器等于没有画风指示，
+产出会和旁边的资产图完全不是一套——这件事只有等图渲出来才看得见，所以在渲染就挡住。
+风格锁只有一条记录，改画风改那一条并重投影，不要在各条提示词里各改各的。
+
+**改正文要改规格记录再重渲**，只改 Markdown 会让权威记录与派生文本分家。
 
 ## 自然语言修订
 

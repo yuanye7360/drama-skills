@@ -3,6 +3,9 @@
 此文件由已接受 Look Development 规格和配方 `hash` 派生。它展示视觉方向怎样跨测试轴保持，
 只复制引用块内的自然语言提示词；套件不生成图片，也不调用媒体服务。
 
+元信息与说明跟随 `short-drama.json#/language`；**可复制提示词正文跟随
+`#/format/prompt_language`（默认 `en`）**，与同项目其他可复制提示词同一个值。
+
 ```markdown
 # 项目 Look Development 提示词
 

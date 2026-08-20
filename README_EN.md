@@ -88,18 +88,33 @@ Use $short-drama to init a vertical 9:16 urban face-slapping short-drama project
 Use $short-drama-write to write EP001: a delivery rider humiliated at a luxury
 hotel turns out to be the group chairman
 
-# 3. Extract assets, write prompts and storyboards
+# 3. Assets, storyboard, video prompts: the spine is these three lines
 Use $short-drama-assets to extract characters/scenes/props from EP001
+Use $short-drama-storyboard to author EP001's shots and keyframes
+Use $short-drama-video-prompts to translate each authored shot into a video prompt
+
+# 3a. A branch parallel to the storyboard; it does not wait for the shots
+Use $short-drama-image-prompts to write reference prompts for accepted assets
+
+# 3b. Optional; do not send the line you do not need
 When the visual language needs alignment, use $short-drama for Look Development,
 then $short-drama-image-prompts for character/location/high-pressure style-frame prompts
-Use $short-drama-image-prompts to write reference prompts for accepted assets
-Use $short-drama-storyboard to audition distinct directing approaches for key scenes,
-accept a scene visual plan, then author the formal storyboard
-Use $short-drama-video-prompts to translate each authored shot into a video prompt
+Use $short-drama-storyboard to audition distinct directing approaches for EP001's key
+scenes and accept a scene visual plan
+Use $short-drama-storyboard for a previs storyboard sheet of EP001 SC001 (between the
+shots and the keyframes; worth it for dense blocking or action, skipped for simple
+scenes that go straight to keyframes)
 
 # 4. Independent review
 Use $short-drama-review to review EP001's script and prompts
 ```
+
+Only three lines of step 3 are required. Reference prompts and the storyboard are
+**sibling branches** after asset acceptance — the storyboard never waits for reference
+prompts, and reference prompts never wait for shots; Look Development and the previs
+sheet are branches you simply do not invoke when you do not need them. The full
+checkpoint map is in
+[the creator workflow](skills/short-drama/references/creator-workflow.md#checkpoints-and-branches).
 
 See [demo/](demo/) for one episode's full excerpt chain: script → asset sheets →
 storyboard → video prompts.
@@ -116,7 +131,9 @@ flowchart LR
     write["Episode script<br/>$short-drama-write"]:::phase
     assets["Asset decisions<br/>$short-drama-assets"]:::phase
     img["Image prompts<br/>$short-drama-image-prompts"]:::phase
-    sb["Storyboard/keyframes<br/>$short-drama-storyboard"]:::phase
+    sb["Shots<br/>$short-drama-storyboard"]:::phase
+    sheet["Previs sheet<br/>$short-drama-storyboard"]:::phase
+    kf["Keyframes<br/>$short-drama-storyboard"]:::phase
     vid["Video prompts<br/>$short-drama-video-prompts"]:::phase
     rev["Independent review<br/>$short-drama-review"]:::final
     pkg["Text delivery package"]:::final
@@ -124,7 +141,9 @@ flowchart LR
     nva -.with a source.-> dev
     dev -.optional.-> write --> assets
     assets --> img
-    assets --> sb --> vid
+    assets --> sb
+    sb -.dense blocking.-> sheet --> kf
+    sb --> kf --> vid
     img --> rev
     vid --> rev --> pkg
 ```
@@ -137,7 +156,7 @@ flowchart LR
 | `short-drama-write` | Episode contract, causal beats, performable screenplay, and the project's accepted production dialect |
 | `short-drama-assets` | Character/Look, Location/View, Prop/State, optional voice direction, continuity decisions |
 | `short-drama-image-prompts` | Lookdev style frames, reusable character/location/prop reference prompts, and scoped edits |
-| `short-drama-storyboard` | Optional scene visual plans and Coverage Auditions, source coverage, shots, boundaries, and frozen keyframes |
+| `short-drama-storyboard` | Optional scene visual plans and Coverage Auditions, source coverage, shots, boundaries, an optional previs storyboard sheet, and frozen keyframes |
 | `short-drama-video-prompts` | Ordered action, multi-actor performance and attention handoffs, camera/audio intent, timing, and exact boundaries |
 | `short-drama-review` | Structural/content review, project-bounded diagnosis from authorized production observations, and independent verdicts |
 

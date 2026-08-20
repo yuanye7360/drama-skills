@@ -57,6 +57,32 @@
     }
   ],
   "container_duration": "<各成员 accepted_duration 之和>",
+  "seam": {
+    "kind": "<match_cut | hard_cut | episode_end>",
+    "at_shot_boundary": true,
+    "shared_frame": "<match_cut 为 true；hard_cut 为 false>",
+    "tail_shot_ref": {
+      "owner": "short-drama-storyboard",
+      "artifact": "剧集/<EP>/storyboard/shots.jsonl",
+      "hash": "<sha256>",
+      "record_id": "SHOT-<本容器末镜>",
+      "field": "/end_boundary"
+    },
+    "head_shot_ref": {
+      "owner": "short-drama-storyboard",
+      "artifact": "剧集/<EP>/storyboard/shots.jsonl",
+      "hash": "<sha256>",
+      "record_id": "SHOT-<下一容器首镜>",
+      "field": "/start_boundary"
+    },
+    "head_frame_ref": {
+      "owner": "short-drama-storyboard",
+      "artifact": "剧集/<EP>/storyboard/keyframes.jsonl",
+      "hash": "<sha256>",
+      "record_id": "KEY-<下一容器首镜>-START"
+    },
+    "tail_frame_ref": null
+  },
   "membership_basis": {
     "source_order_contiguous": "<true | 说明为什么不连续及去向>",
     "binding_chain_equal": "<true | 说明哪一位成员的绑定不同、以及为什么仍同容器>",
@@ -78,6 +104,10 @@
 5. **逐成员**解析 `location_binding_ref` 与 `asset_bindings_ref`，各成员解析结果相同时
    `binding_chain_equal` 才能为 `true`；只引用其中一条成员记录不构成证明。
 6. `membership_basis` 三项都有结论，未成立的写进 `unresolved`，不留空。
+7. `seam.kind` 与实情一致：解析 `tail_shot_ref` / `head_shot_ref` 两端的地点与人物绑定，
+   两端相同且只有一个主体时才可写 `match_cut` 并令 `shared_frame: true`；任一端不同即为
+   `hard_cut`、`shared_frame: false`。**`hard_cut` 不得把 `head_frame_ref` 复用为
+   `tail_frame_ref`**——那是另一个主体或地点的画面。
 
 任何一项不成立即为结构缺陷，按主技能的 `stale` 与恢复流程处理，不在渲染文本里补救。
 
@@ -98,6 +128,10 @@
   不得在容器里直接改数。
 - **成员资格判据**：语义部分见 `references/delivery-profile.md` 的多镜容器成员资格；
   本文件只负责让判据的结论可被引用与核对。
+
+`seam` 的三条 ref 按接缝类型取舍：`episode_end` 删掉 `head_shot_ref` / `head_frame_ref`；
+`tail_frame_ref` 只在执行端确实要钉尾帧时才填，`hard_cut` 下必须填本容器末镜自己的 end 关键帧，
+该关键帧尚未建立时保持 `null` 并把补帧请求写进 `unresolved`。
 
 复制后删除不适用的可选字段。容器不跨越已接受的场次或时间跳跃；省略、闪回分支与声明过的
 蒙太奇各自单独成容器。

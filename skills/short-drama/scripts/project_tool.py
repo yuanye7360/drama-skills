@@ -13,6 +13,7 @@ import argparse
 import contextlib
 import hashlib
 import importlib
+import importlib.util
 import json
 import os
 import re
@@ -1069,6 +1070,24 @@ def _normalize_portable_path_values(
             exact.add(relative)
             normalized.append(relative)
     return sorted(normalized)
+
+
+def _is_staging_source(relative: str) -> bool:
+    """Return whether a project-relative path is a publication scratch source.
+
+    Publish forces source != target, so a candidate must be written somewhere
+    before it can be published. `.short-drama/tmp/` is the sanctioned scratch
+    area: sources there feed content only (never a durable dependency edge) and
+    are removed once the commit lands, so nothing accumulates in the project
+    root. Anything else under `.short-drama/` stays refused as a source.
+    """
+
+    parts = PurePosixPath(relative).parts
+    return (
+        len(parts) >= 3
+        and parts[0].casefold() == ".short-drama"
+        and parts[1].casefold() == "tmp"
+    )
 
 
 def _root_role(name: str) -> str | None:
@@ -2342,6 +2361,60 @@ def recover_project(path: Path) -> dict[str, Any]:
         "checked": len(results),
         "blocked": sum(result["status"] == "blocked" for result in results),
         "results": results,
+    }
+
+
+def _verify_installation() -> dict[str, Any]:
+    """The shipped verifier's own answer about this installation.
+
+    Loaded rather than reimplemented: a second opinion about installation
+    integrity is a second thing to keep in sync, and the one that matters is
+    the one a creator gets when they run the verifier directly.
+    """
+    implementation = Path(__file__).resolve().parent / "suite_verify.py"
+    spec = importlib.util.spec_from_file_location(
+        "short_drama_suite_verify_for_enter", implementation
+    )
+    if spec is None or spec.loader is None:
+        raise ValueError(f"cannot load the suite verifier: {implementation}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return dict(module.verify_suite(Path(__file__).resolve().parents[1]))
+
+
+def enter_project(path: Path) -> dict[str, Any]:
+    """The stage-entry preflight as one call: verify, recover, then read status.
+
+    The order is the point. Status read before recovery describes a project that
+    may be mid-write, so it cannot be the thing a stage acts on. Collapsing the
+    three commands is only safe while that order is preserved and while a
+    blocked recovery keeps the floor — hence `next_action` rather than leaving a
+    caller to notice `blocked` inside a nested payload.
+    """
+    try:
+        install: dict[str, Any] = _verify_installation()
+    except (OSError, ValueError) as error:
+        # Recovery writes to creator files, so an installation that cannot be
+        # trusted stops the sequence here rather than after it has finished
+        # somebody else's half-written transaction.
+        return {
+            "install": {"status": "failed", "error": f"{type(error).__name__}: {error}"},
+            "recovery": None,
+            "status": None,
+            "next_action": "fix_installation",
+        }
+    recovery = recover_project(path)
+    status = project_status(path)
+    blocked = int(recovery.get("blocked") or 0)
+    return {
+        "install": install,
+        "recovery": recovery,
+        "status": status,
+        "next_action": (
+            "resolve_blocked_transactions"
+            if blocked
+            else str((status.get("recovery") or {}).get("next_action") or "continue")
+        ),
     }
 
 
@@ -4727,32 +4800,77 @@ def _parse_cli_pairs(values: Iterable[str], *, label: str) -> dict[str, str]:
     return parsed
 
 
+def _cleanup_staging_sources(root: Path, sources: Iterable[Path]) -> None:
+    """Remove consumed `.short-drama/tmp/` sources and any emptied subdirs.
+
+    Runs only after the publication commits. The tmp root itself is preserved;
+    pruning stops there and at the first non-empty directory, so unrelated
+    scratch files staged by another in-flight publication are left untouched.
+    """
+
+    tmp_root = root / ".short-drama" / "tmp"
+    for source_path in sources:
+        try:
+            source_path.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError:
+            # Cleanup happens after the publication committed; a source the OS
+            # refuses to delete (e.g. a locked file on Windows) must not turn
+            # the successful publish into a reported failure. Leave it for a
+            # later run and skip pruning its directories.
+            continue
+        parent = source_path.parent
+        while parent != tmp_root and tmp_root in parent.parents:
+            try:
+                parent.rmdir()
+            except OSError:
+                break
+            parent = parent.parent
+
+
 def _publish_from_cli(args: argparse.Namespace) -> dict[str, Any]:
     root = find_project(args.path)
     bindings = _parse_cli_pairs(args.outputs, label="output")
     outputs: dict[str, bytes] = {}
     inputs = _parse_cli_pairs(args.inputs or [], label="input")
+    staging_sources: list[Path] = []
     for raw_target, raw_source in bindings.items():
         target = _relative_path(raw_target)
-        source = _relative_path(raw_source)
+        # A source may live in the `.short-drama/tmp/` scratch area; any other
+        # path under `.short-drama/` stays refused as a source.
+        source = _relative_path(raw_source, allow_operations=True)
+        if (
+            PurePosixPath(source).parts[0].casefold() == ".short-drama"
+            and not _is_staging_source(source)
+        ):
+            raise ValueError(
+                "publication source under .short-drama must live in "
+                f".short-drama/tmp/: {source}"
+            )
         if _portable_path_identity(target) == _portable_path_identity(source):
             raise ValueError("candidate source and publication target must differ")
         source_path = _project_path(root, source)
         if source_path.is_symlink() or not source_path.is_file():
             raise ValueError(f"candidate source is unavailable: {source}")
+        outputs[target] = source_path.read_bytes()
+        if _is_staging_source(source):
+            # Scratch content only — never recorded as a durable dependency,
+            # so deleting it after commit leaves no dangling input reference.
+            staging_sources.append(source_path)
+            continue
         source_hash = sha256_file(source_path)
         previous = inputs.get(source)
         if previous is not None and previous != source_hash:
             raise ValueError(f"input hash does not match candidate source: {source}")
         inputs[source] = source_hash
-        outputs[target] = source_path.read_bytes()
     records: dict[str, list[str]] = {}
     for value in args.input_records or []:
         key, separator, selector = value.partition("=")
         if not separator or not key or not selector:
             raise ValueError("input record must use PATH=SELECTOR")
         records.setdefault(_relative_path(key), []).append(selector)
-    return publish_candidate(
+    result = publish_candidate(
         root,
         owner=args.owner,
         artifact_id=args.artifact_id,
@@ -4761,6 +4879,63 @@ def _publish_from_cli(args: argparse.Namespace) -> dict[str, Any]:
         input_hashes=inputs,
         input_records=records or None,
     )
+    _cleanup_staging_sources(root, staging_sources)
+    return result
+
+
+def _add_project_path(
+    subparser: argparse.ArgumentParser, *, default_to_cwd: bool = False
+) -> None:
+    """Accept the project either positionally or as `--project`.
+
+    The renderers in the sibling skills all spell it `--project`, so a creator
+    moving between them and this tool has to remember which of two neighbouring
+    scripts wants which spelling. Accepting both costs one resolver and removes
+    a class of round trip whose only outcome is a usage error.
+    """
+    subparser.add_argument(
+        "path",
+        type=Path,
+        nargs="?",
+        default=None,
+        help="project root; may also be given as --project",
+    )
+    subparser.add_argument(
+        "--project",
+        type=Path,
+        default=None,
+        dest="project_flag",
+        help="same as the positional project root",
+    )
+    # The cwd fallback is applied by the resolver, not by argparse: defaulting
+    # the positional here would make "--project X" look like two paths that
+    # disagree, and report a conflict the creator never created.
+    subparser.set_defaults(path_defaults_to_cwd=default_to_cwd)
+
+
+def _resolve_project_path(
+    parser: argparse.ArgumentParser, args: argparse.Namespace
+) -> Path:
+    """One project path out of the two accepted spellings."""
+    positional = getattr(args, "path", None)
+    flag = getattr(args, "project_flag", None)
+    if flag is not None and positional is not None:
+        # Resolve before comparing: `.` and an absolute path can name the same
+        # project, and refusing that would be pedantry rather than safety.
+        if Path(positional).resolve() != Path(flag).resolve():
+            parser.error(
+                "the positional project path and --project name different "
+                f"projects ({positional} vs {flag}); pass one"
+            )
+        return Path(flag)
+    resolved = flag if flag is not None else positional
+    if resolved is None:
+        if getattr(args, "path_defaults_to_cwd", False):
+            return Path.cwd()
+        parser.error(
+            f"{args.command} needs a project root, positionally or as --project"
+        )
+    return Path(resolved)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -4775,16 +4950,16 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--aspect-ratio", default="9:16")
 
     status = subparsers.add_parser("status", help="Print a creator-safe project summary.")
-    status.add_argument("path", type=Path, nargs="?", default=Path.cwd())
+    _add_project_path(status, default_to_cwd=True)
 
     recover = subparsers.add_parser("recover", help="Recover interrupted publications.")
-    recover.add_argument("path", type=Path, nargs="?", default=Path.cwd())
+    _add_project_path(recover, default_to_cwd=True)
     recover.add_argument("--transaction")
 
     publish = subparsers.add_parser(
         "publish", help="Publish a text/JSON candidate through the recovery WAL."
     )
-    publish.add_argument("path", type=Path)
+    _add_project_path(publish)
     publish.add_argument("--owner", required=True)
     publish.add_argument("--artifact-id", required=True)
     publish.add_argument(
@@ -4824,7 +4999,7 @@ def build_parser() -> argparse.ArgumentParser:
     accept = subparsers.add_parser(
         "accept", help="Record creator acceptance for exact candidate hashes."
     )
-    accept.add_argument("path", type=Path)
+    _add_project_path(accept)
     accept.add_argument("--artifact-id", required=True)
     accept.add_argument("--decision", required=True, choices=("accepted", "rejected"))
     accept.add_argument("--target", action="append", required=True, dest="targets")
@@ -4836,7 +5011,7 @@ def build_parser() -> argparse.ArgumentParser:
     review = subparsers.add_parser(
         "review", help="Record an independent verdict for exact accepted hashes."
     )
-    review.add_argument("path", type=Path)
+    _add_project_path(review)
     review.add_argument("--artifact-id", required=True)
     review.add_argument(
         "--verdict",
@@ -4850,7 +5025,7 @@ def build_parser() -> argparse.ArgumentParser:
     review.add_argument("--verdict-record-id")
 
     package = subparsers.add_parser("package", help="Package approved text/JSON artifacts.")
-    package.add_argument("path", type=Path)
+    _add_project_path(package)
     package.add_argument("--episode", required=True)
     package.add_argument("--include", action="append", required=True, dest="includes")
     package.add_argument(
@@ -4867,15 +5042,31 @@ def build_parser() -> argparse.ArgumentParser:
     verify = subparsers.add_parser(
         "verify", help="Re-check a delivered package against its own checksums."
     )
-    verify.add_argument("path", type=Path)
+    _add_project_path(verify)
     verify.add_argument("--episode", required=True)
+
+    enter = subparsers.add_parser(
+        "enter",
+        help=(
+            "Verify the install, finish interrupted publications, then report "
+            "status — the stage-entry preflight as one call."
+        ),
+    )
+    _add_project_path(enter, default_to_cwd=True)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.command != "init":
+        # Collapse the two accepted spellings before anything reads args.path,
+        # so every branch below stays written against one attribute.
+        args.path = _resolve_project_path(parser, args)
     try:
-        if args.command == "init":
+        if args.command == "enter":
+            result = enter_project(args.path)
+        elif args.command == "init":
             result = initialize_project(
                 args.path,
                 title=args.title,

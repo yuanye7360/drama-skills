@@ -50,6 +50,7 @@ license: MIT
 | 自检、独立复核、正反案例 | [审查量表与合成案例](references/review-and-fixtures.md) |
 | 生产端提示词写法、台词绑定、负面清单 | [生产提示词语法惯例](references/production-prompt-grammar.md) |
 | 分段交付、槽位职责、时长分配、交付路由与执行触发词 | [交付档案与槽位语义](references/delivery-profile.md) |
+| 跟故事板整段生成（storyboard-driven 多镜容器）、首尾帧衔接 | [storyboard-driven 容器与首尾帧衔接](references/delivery-profile.md#七storyboard-driven-容器与首尾帧衔接vid-20) |
 | 多张参考图的用途、补拍或替代版范围 | [参考媒体与补拍](references/stage-contract.md#参考媒体与补拍) |
 
 规格使用 [运动规格模板](assets/motion-spec.jsonl.md)；末镜或下一集记录尚未建立时参考
@@ -189,6 +190,22 @@ python3 <skill-dir>/scripts/motion_timing_check.py \
   记录容器成员顺序、各成员已接受时长的只读引用与容器时长，模板见
   [delivery-container.jsonl.md](assets/delivery-container.jsonl.md)；
 - `剧集/<EP>/storyboard/video-prompts.md`：由已接受规格、容器记录和配方 `hash` 生成的文本版本。
+  容器一节**交给 [render_container_prompts.py](scripts/render_container_prompts.py) 渲染，不要手写**：
+
+```bash
+python3 <skill-dir>/scripts/render_container_prompts.py 剧集/EP001/storyboard/delivery-containers.jsonl \
+  --project short-drama.json
+```
+
+  `--shots` / `--motion-specs` / `--sheets` 省略时取容器文件旁边的同名文件，`--style-lock`
+  省略时从项目根推导；canonical 位置不存在时脚本点名要求显式传入，不猜路径。
+
+  脚本算分段偏移、逐字透传成员的运动正文，并**按 `VID-21` 复核接缝**：从成员镜头的主体与
+  地点重新判定 `match_cut` / `hard_cut`，记录声称匹配切却跨了主体或地点时拒绝渲染。它还挡住
+  容器时长与成员之和不符、一个镜头被两个容器认领、成员 `order` 不连续。
+
+  正文语言取自记录里的 `generic_prompt`。**改语言要改运动规格记录再重渲**，只改 Markdown
+  会让权威记录与派生文本分家。
 
 自然语言改提示词时，先展示规格字段怎样变化和重新生成的文本预览；若改动触碰分镜或
 剧本负责的内容，保持当前文件不变，并把修改请求交给对应技能。跨文件发布遵循主技能的

@@ -77,6 +77,16 @@ uv venv --python 3.10 /tmp/floor && \
 python3 tools/update_suite_manifest.py skills/short-drama
 ```
 
+**克隆后先跑一次这句**，之后清单就由 pre-commit 钩子在提交时自动重建并加入本次提交：
+
+```bash
+python3 tools/install_hooks.py
+```
+
+它只做一件事：把 `core.hooksPath` 指向仓库里版本化的 `.githooks/`。忘了装也不会静默出错——
+`tools/verify_suite.py` 撞到 hash 不符时会指出要跑哪句。清单没跟上会让 9 个安装解析测试变红，
+而那些失败读起来和本次改动毫无关系，所以别靠记性。
+
 ## 更新日志
 
 面向创作者可见的改动要写进 `CHANGELOG.md` 的 `[未发布]` 段。按约束力归类：
