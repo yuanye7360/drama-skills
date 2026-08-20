@@ -71,6 +71,19 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
     return records
 
 
+def derive_project_path(project_file: Path, *relative: str) -> Path | None:
+    """A canonical-layout path under the project root, when it is really there.
+
+    Every path this script needs already has one obvious home in a canonical
+    project. Making the creator retype them is how a re-render turns into nine
+    hand-assembled arguments, and a hand-assembled argument is one that can be
+    forgotten. A project on a non-canonical layout gets nothing back and is
+    told to pass the flag.
+    """
+    candidate = project_file.resolve().parent.joinpath(*relative)
+    return candidate if candidate.exists() else None
+
+
 def _short(shot_id: str) -> str:
     parts = shot_id.split("-")
     return "-".join(parts[2:]) if len(parts) > 2 else shot_id
@@ -313,12 +326,16 @@ def build_parser() -> argparse.ArgumentParser:
         description="Render storyboard-driven container sections for video-prompts.md."
     )
     parser.add_argument("containers", type=Path, help="delivery-containers.jsonl")
-    parser.add_argument("--shots", type=Path, required=True)
-    parser.add_argument("--motion-specs", type=Path, required=True)
-    parser.add_argument("--sheets", type=Path, required=True,
-                        help="storyboard-sheets.jsonl")
-    parser.add_argument("--style-lock", type=Path, required=True,
-                        help="项目开发/style-lock.jsonl")
+    # All four default to their one canonical home, so a plain re-render is the
+    # containers file plus the project file.
+    parser.add_argument("--shots", type=Path, default=None,
+                        help="defaults to shots.jsonl beside the containers")
+    parser.add_argument("--motion-specs", type=Path, default=None,
+                        help="defaults to motion-specs.jsonl beside the containers")
+    parser.add_argument("--sheets", type=Path, default=None,
+                        help="defaults to storyboard-sheets.jsonl beside the containers")
+    parser.add_argument("--style-lock", type=Path, default=None,
+                        help="defaults to 项目开发/style-lock.jsonl under the project")
     parser.add_argument("--project", type=Path, required=True)
     parser.add_argument("--out", type=Path, default=None, help="default: stdout")
     return parser
@@ -328,14 +345,30 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         containers = _load_jsonl(args.containers)
+        beside = args.containers.resolve().parent
+        paths = {
+            "--shots": args.shots or beside / "shots.jsonl",
+            "--motion-specs": args.motion_specs or beside / "motion-specs.jsonl",
+            "--sheets": args.sheets or beside / "storyboard-sheets.jsonl",
+            "--style-lock": args.style_lock
+            or derive_project_path(args.project, "项目开发", "style-lock.jsonl"),
+        }
+        for flag, path in paths.items():
+            if path is None or not path.exists():
+                raise RenderError(
+                    f"{flag} was not given and its canonical location is not there; "
+                    f"pass {flag} explicitly"
+                )
         shots = {
-            r.get("shot_id", ""): r for r in _load_jsonl(args.shots) if r.get("shot_id")
+            r.get("shot_id", ""): r
+            for r in _load_jsonl(paths["--shots"])
+            if r.get("shot_id")
         }
         motions = {
             r.get("shot_ref", {}).get("record_id", ""): str(
                 r.get("generic_prompt", "")
             ).strip()
-            for r in _load_jsonl(args.motion_specs)
+            for r in _load_jsonl(paths["--motion-specs"])
         }
         project = _load_json(args.project)
         if not isinstance(project, dict):
@@ -344,9 +377,9 @@ def main(argv: list[str] | None = None) -> int:
             "prompt_language"
         ) or DEFAULT_PROMPT_LANGUAGE
         sheets = {
-            r.get("sheet_id", ""): r for r in _load_jsonl(args.sheets)
+            r.get("sheet_id", ""): r for r in _load_jsonl(paths["--sheets"])
         }
-        style_records = _load_jsonl(args.style_lock)
+        style_records = _load_jsonl(paths["--style-lock"])
         if len(style_records) != 1:
             raise RenderError(
                 "%s: a project has exactly one style lock, found %d"

@@ -74,6 +74,116 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
     return records
 
 
+DOCUMENT_RECORD_KIND = "document"
+_MACHINE_HEADER_MARKERS = ("来源：", "范围：", "语言：", "配方：", "容器权威：")
+
+
+def split_document_record(
+    records: list[dict[str, Any]],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Peel the optional leading document-metadata record off the content records.
+
+    The document title and the creator-facing note belong to the authoritative
+    records, not to whoever last typed the command line. A re-render that has to
+    be told them again is a re-render that drops them without saying so.
+    """
+    document: dict[str, Any] = {}
+    content: list[dict[str, Any]] = []
+    for index, record in enumerate(records):
+        kind = record.get("record_kind")
+        if kind is None:
+            content.append(record)
+            continue
+        if kind != DOCUMENT_RECORD_KIND:
+            raise RenderError(
+                f"record {index}: unknown record_kind {kind!r}; the only metadata "
+                f"kind is {DOCUMENT_RECORD_KIND!r}, and guessing would render a "
+                "metadata typo as content"
+            )
+        if index != 0:
+            raise RenderError(
+                "the document record has to be the first record in the file"
+            )
+        document = record
+    return document, content
+
+
+def resolve_header_value(
+    *, flag: str | None, document: dict[str, Any], key: str, fallback: str | None
+) -> str | None:
+    """Flag beats the record, the record beats the fallback."""
+    if flag is not None:
+        return flag
+    value = document.get(key)
+    if isinstance(value, str) and value.strip():
+        return value
+    return fallback
+
+
+def _header_parts(text: str) -> tuple[str | None, list[str]]:
+    """The H1 and the creator prose lines of a rendered document's header."""
+    title: str | None = None
+    prose: list[str] = []
+    for line in text.splitlines():
+        if line.startswith("## "):
+            break
+        if title is None and line.startswith("# "):
+            title = line[2:].strip()
+        elif line.startswith("> "):
+            body = line[2:].strip()
+            if not any(marker in body for marker in _MACHINE_HEADER_MARKERS):
+                prose.append(body)
+    return title, prose
+
+
+def guard_header_metadata(
+    existing: str, rendered: str, *, title_explicit: bool
+) -> None:
+    """Refuse to replace a derived document with one that loses its own header.
+
+    Derived text is a cache, but it used to be the only home for the title
+    prefix and the creator note, so a bare re-render deleted them and reported
+    success. Until every document carries its own metadata record, this guard
+    is what stands between a routine re-render and silent loss.
+    """
+    old_title, old_prose = _header_parts(existing)
+    new_title, new_prose = _header_parts(rendered)
+    lost = [line for line in old_prose if line not in new_prose]
+    if lost:
+        raise RenderError(
+            "refusing to overwrite: the existing document carries a creator note "
+            "these records do not reproduce (%s). Put it in a leading "
+            '{"record_kind": "document", "note": "..."} record, or restate it '
+            "with --note." % "; ".join(lost)
+        )
+    if not title_explicit and old_title and new_title != old_title:
+        raise RenderError(
+            "refusing to overwrite: the existing title %r would become %r, which "
+            'is only a fallback. Put it in a leading {"record_kind": "document", '
+            '"title": "..."} record, or restate it with --title.'
+            % (old_title, new_title)
+        )
+
+
+def derive_project_path(project_file: Path, *relative: str) -> Path | None:
+    """A canonical-layout path under the project root, when it is really there.
+
+    Every path this script needs already has one obvious home in a canonical
+    project. Making the creator retype them is how a re-render turns into nine
+    hand-assembled arguments, and a hand-assembled argument is one that can be
+    forgotten. A project on a non-canonical layout gets nothing back and is
+    told to pass the flag.
+    """
+    candidate = project_file.resolve().parent.joinpath(*relative)
+    return candidate if candidate.exists() else None
+
+
+def derive_asset_files(project_file: Path) -> list[Path]:
+    """Every bible JSONL, in a stable order so display names resolve the same way."""
+    bible = project_file.resolve().parent / "设定集"
+    return sorted(bible.glob("*.jsonl")) if bible.is_dir() else []
+
+
 def _meaningful(value: Any) -> bool:
     if not isinstance(value, str):
         return bool(value)
@@ -262,11 +372,14 @@ def build_parser() -> argparse.ArgumentParser:
         description="Render keyframe prompts from accepted keyframe records."
     )
     parser.add_argument("keyframes", type=Path, help="keyframes.jsonl")
-    parser.add_argument("--shots", type=Path, required=True, help="shots.jsonl")
+    parser.add_argument(
+        "--shots", type=Path, default=None,
+        help="shots.jsonl; defaults to the one beside the keyframes",
+    )
     parser.add_argument("--project", type=Path, required=True, help="short-drama.json")
     parser.add_argument(
-        "--style-lock", type=Path, required=True,
-        help="项目开发/style-lock.jsonl",
+        "--style-lock", type=Path, default=None,
+        help="项目开发/style-lock.jsonl; derived from the project root when omitted",
     )
     parser.add_argument("--episode-id", default=None)
     parser.add_argument("--out", type=Path, default=None, help="default: stdout")
@@ -277,9 +390,28 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        keyframes = _load_jsonl(args.keyframes)
+        document, keyframes = split_document_record(_load_jsonl(args.keyframes))
+        if not keyframes:
+            raise RenderError(
+                f"{args.keyframes} carries only a document record; there is "
+                "nothing to render"
+            )
+        paths = {
+            "--shots": args.shots
+            or args.keyframes.resolve().parent / "shots.jsonl",
+            "--style-lock": args.style_lock
+            or derive_project_path(args.project, "项目开发", "style-lock.jsonl"),
+        }
+        for flag, path in paths.items():
+            if path is None or not path.exists():
+                raise RenderError(
+                    f"{flag} was not given and its canonical location is not there; "
+                    f"pass {flag} explicitly"
+                )
         shots = {
-            r.get("shot_id", ""): r for r in _load_jsonl(args.shots) if r.get("shot_id")
+            r.get("shot_id", ""): r
+            for r in _load_jsonl(paths["--shots"])
+            if r.get("shot_id")
         }
         project = _load_json(args.project)
         if not isinstance(project, dict):
@@ -288,7 +420,10 @@ def main(argv: list[str] | None = None) -> int:
             "prompt_language"
         ) or DEFAULT_PROMPT_LANGUAGE
 
-        episode_id = args.episode_id
+        episode_id = resolve_header_value(
+            flag=args.episode_id, document=document, key="episode_id", fallback=None
+        )
+        title_explicit = episode_id is not None
         if episode_id is None:
             parts = [
                 p
@@ -302,9 +437,17 @@ def main(argv: list[str] | None = None) -> int:
             shots,
             episode_id=episode_id,
             prompt_language=prompt_language,
-            note=args.note,
-            style_lock=load_style_lock(args.style_lock),
+            note=resolve_header_value(
+                flag=args.note, document=document, key="note", fallback=None
+            ),
+            style_lock=load_style_lock(paths["--style-lock"]),
         )
+        if args.out is not None and args.out.exists():
+            guard_header_metadata(
+                args.out.read_text(encoding="utf-8"),
+                text,
+                title_explicit=title_explicit,
+            )
     except RenderError as error:
         print(str(error), file=sys.stderr)
         return 2

@@ -171,10 +171,11 @@ sheet，直接进关键帧；密集调度或动作戏建议先出 sheet 再逐�
 
 ```bash
 python3 <skill-dir>/scripts/render_keyframe_prompts.py 剧集/EP001/storyboard/keyframes.jsonl \
-  --shots 剧集/EP001/storyboard/shots.jsonl --project short-drama.json \
-  --style-lock 项目开发/style-lock.jsonl \
-  --out 剧集/EP001/storyboard/keyframe-prompts.md
+  --project short-drama.json --out 剧集/EP001/storyboard/keyframe-prompts.md
 ```
+
+`--shots` 省略时取关键帧旁边的 `shots.jsonl`，`--style-lock` 省略时从项目根推导；
+canonical 位置不存在时脚本点名要求显式传入，不猜路径。
 
 正文取自记录的 `generic_prompt`，逐字透传；脚本只管文档形状与元信息来源：地点取自镜头
 （关键帧不拥有它）、空的文字政策整行省略而不是补一句派生说明、单段正文用引用块、
@@ -182,6 +183,16 @@ python3 <skill-dir>/scripts/render_keyframe_prompts.py 剧集/EP001/storyboard/k
 
 结构化关键帧保存只属于单帧的选择；Markdown 不是第二份事实来源。**改了正文要改记录再重渲，
 不要只改 Markdown**——那会让权威记录与派生文本分家。
+
+文档级的标题集号与创作者说明同样属于记录，写成 `keyframes.jsonl` / `storyboard-sheets.jsonl`
+首条 `document` 记录：
+
+```json
+{"record_kind": "document", "episode_id": "EP001", "note": "覆盖 SC001–SC003；SC004 未出。"}
+```
+
+`--episode-id` / `--note` 只是一次性覆写。`--out` 已存在且其页眉带着本次渲染重现不出来的
+说明或标题时，两个脚本都**拒绝覆写**并指出补哪条记录——重渲不会静默删掉那行说明。
 
 把已接受镜头的开始边界和准确资产版本，落到一个可以同时存在的瞬间：焦点、构图、
 摄影机与镜头焦段、空间锚点、姿态、目光、双手与持物、表情、光线、排除项。

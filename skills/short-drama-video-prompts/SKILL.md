@@ -194,11 +194,11 @@ python3 <skill-dir>/scripts/motion_timing_check.py \
 
 ```bash
 python3 <skill-dir>/scripts/render_container_prompts.py 剧集/EP001/storyboard/delivery-containers.jsonl \
-  --shots 剧集/EP001/storyboard/shots.jsonl \
-  --motion-specs 剧集/EP001/storyboard/motion-specs.jsonl \
-  --sheets 剧集/EP001/storyboard/storyboard-sheets.jsonl \
-  --style-lock 项目开发/style-lock.jsonl --project short-drama.json
+  --project short-drama.json
 ```
+
+  `--shots` / `--motion-specs` / `--sheets` 省略时取容器文件旁边的同名文件，`--style-lock`
+  省略时从项目根推导；canonical 位置不存在时脚本点名要求显式传入，不猜路径。
 
   脚本算分段偏移、逐字透传成员的运动正文，并**按 `VID-21` 复核接缝**：从成员镜头的主体与
   地点重新判定 `match_cut` / `hard_cut`，记录声称匹配切却跨了主体或地点时拒绝渲染。它还挡住

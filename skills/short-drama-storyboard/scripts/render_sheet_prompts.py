@@ -115,6 +115,97 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
     return records
 
 
+DOCUMENT_RECORD_KIND = "document"
+_MACHINE_HEADER_MARKERS = ("来源：", "范围：", "语言：", "配方：", "容器权威：")
+
+
+def split_document_record(
+    records: list[dict[str, Any]],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Peel the optional leading document-metadata record off the content records.
+
+    The document title and the creator-facing note belong to the authoritative
+    records, not to whoever last typed the command line. A re-render that has to
+    be told them again is a re-render that drops them without saying so.
+    """
+    document: dict[str, Any] = {}
+    content: list[dict[str, Any]] = []
+    for index, record in enumerate(records):
+        kind = record.get("record_kind")
+        if kind is None:
+            content.append(record)
+            continue
+        if kind != DOCUMENT_RECORD_KIND:
+            raise RenderError(
+                f"record {index}: unknown record_kind {kind!r}; the only metadata "
+                f"kind is {DOCUMENT_RECORD_KIND!r}, and guessing would render a "
+                "metadata typo as content"
+            )
+        if index != 0:
+            raise RenderError(
+                "the document record has to be the first record in the file"
+            )
+        document = record
+    return document, content
+
+
+def resolve_header_value(
+    *, flag: str | None, document: dict[str, Any], key: str, fallback: str | None
+) -> str | None:
+    """Flag beats the record, the record beats the fallback."""
+    if flag is not None:
+        return flag
+    value = document.get(key)
+    if isinstance(value, str) and value.strip():
+        return value
+    return fallback
+
+
+def _header_parts(text: str) -> tuple[str | None, list[str]]:
+    """The H1 and the creator prose lines of a rendered document's header."""
+    title: str | None = None
+    prose: list[str] = []
+    for line in text.splitlines():
+        if line.startswith("## "):
+            break
+        if title is None and line.startswith("# "):
+            title = line[2:].strip()
+        elif line.startswith("> "):
+            body = line[2:].strip()
+            if not any(marker in body for marker in _MACHINE_HEADER_MARKERS):
+                prose.append(body)
+    return title, prose
+
+
+def guard_header_metadata(
+    existing: str, rendered: str, *, title_explicit: bool
+) -> None:
+    """Refuse to replace a derived document with one that loses its own header.
+
+    Derived text is a cache, but it used to be the only home for the title
+    prefix and the creator note, so a bare re-render deleted them and reported
+    success. Until every document carries its own metadata record, this guard
+    is what stands between a routine re-render and silent loss.
+    """
+    old_title, old_prose = _header_parts(existing)
+    new_title, new_prose = _header_parts(rendered)
+    lost = [line for line in old_prose if line not in new_prose]
+    if lost:
+        raise RenderError(
+            "refusing to overwrite: the existing document carries a creator note "
+            "these records do not reproduce (%s). Put it in a leading "
+            '{"record_kind": "document", "note": "..."} record, or restate it '
+            "with --note." % "; ".join(lost)
+        )
+    if not title_explicit and old_title and new_title != old_title:
+        raise RenderError(
+            "refusing to overwrite: the existing title %r would become %r, which "
+            'is only a fallback. Put it in a leading {"record_kind": "document", '
+            '"title": "..."} record, or restate it with --title.'
+            % (old_title, new_title)
+        )
+
+
 def _meaningful(value: Any) -> bool:
     """Whether a field carries an instruction rather than a stand-in for none."""
 
@@ -343,7 +434,12 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        sheets = _load_jsonl(args.sheets)
+        document, sheets = split_document_record(_load_jsonl(args.sheets))
+        if not sheets:
+            raise RenderError(
+                f"{args.sheets} carries only a document record; there is nothing "
+                "to render"
+            )
         project = _load_json(args.project)
         if not isinstance(project, dict):
             raise RenderError("project file is not an object")
@@ -363,7 +459,10 @@ def main(argv: list[str] | None = None) -> int:
                 "cannot translate." % (language, prompt_language, prompt_language)
             )
 
-        episode_id = args.episode_id
+        episode_id = resolve_header_value(
+            flag=args.episode_id, document=document, key="episode_id", fallback=None
+        )
+        title_explicit = episode_id is not None
         if episode_id is None:
             first = sheets[0].get("sheet_id", "")
             parts = [p for p in first.split("-") if p.startswith("EP")]
@@ -374,8 +473,16 @@ def main(argv: list[str] | None = None) -> int:
             episode_id=episode_id,
             aspect_ratio=aspect_ratio,
             prompt_language=prompt_language,
-            note=args.note,
+            note=resolve_header_value(
+                flag=args.note, document=document, key="note", fallback=None
+            ),
         )
+        if args.out is not None and args.out.exists():
+            guard_header_metadata(
+                args.out.read_text(encoding="utf-8"),
+                text,
+                title_explicit=title_explicit,
+            )
     except RenderError as error:
         print(str(error), file=sys.stderr)
         return 2
